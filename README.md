@@ -1,4 +1,5 @@
 # Lattice Yang–Mills theory: papers and Lean 4 formalisations
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24232267.svg)](https://doi.org/10.5281/zenodo.24232267)
 
 Papers on lattice gauge theory and on related model problems, with the Lean 4 developments that check their machine-checked statements, by **Yoshikazu Hosomura**.
 
