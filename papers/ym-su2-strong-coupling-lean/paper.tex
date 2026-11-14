@@ -1,0 +1,411 @@
+%% GitHub edition: papers/ym-su2-strong-coupling-lean of the repository lattice-yang-mills. (pdfTeX / latexmk -pdf)
+\documentclass[11pt,a4paper]{article}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper,top=27mm,bottom=27mm,left=28mm,right=28mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={Classical theorems on four-dimensional SU(2) Wilson lattice gauge theory, machine-checked in Lean 4},pdfauthor={Yoshikazu Hosomura}}
+\usepackage{url}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\leanus}{\textunderscore\allowbreak{}}
+\newcommand{\leandot}{.\allowbreak{}}
+\newcommand{\leansl}{/\allowbreak{}}
+\newcommand{\lean}[1]{{\ttfamily\let\_\leanus #1}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\HH}{\mathbb{H}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\renewcommand{\Re}{\operatorname{Re}}
+
+\title{Classical theorems on four-dimensional SU(2) Wilson lattice gauge theory, machine-checked in Lean~4}
+\author{Yoshikazu Hosomura}
+\date{2026-11-14 (text revised 2026-11-15)}
+
+\begin{document}
+\sloppy
+\maketitle
+\begin{center}\small Independent researcher, Japan · wvbks0 [at] gmail.com\end{center}
+\begin{center}\small The use of AI is described in \S\ref{sec:ai}; what is not claimed is in \S\ref{sec:notclaimed}.\end{center}
+
+\begin{abstract}
+We report a Lean~4 formalisation, on top of Mathlib, of a group of classical results on four-dimensional SU(2) Wilson lattice gauge theory at fixed lattice spacing.
+For $0<\beta$ with $18\tanh\beta<1$ (that is, $\beta<0.05561\ldots$), the normalised Wilson measures on the periodic tori $(\Z/2(n+1))^4$, lifted periodically to $\Z^4$, converge weakly as $n\to\infty$ along the whole sequence (no subsequence) to a probability measure $\nu_\beta$.
+The same limit is obtained along tori of every size.
+The limit is invariant under the four unit translations and reflection positive for the time reflection through a lattice hyperplane.
+The Osterwalder--Schrader reconstruction from $\nu_\beta$ gives a Hilbert space and a transfer operator $T$ with $0\le T$ and $\|T-P_\Omega\|\le(18\tanh\beta)^{1/2}$, in the full space of cylinder functions of the positive half and in its gauge-invariant subspace.
+The measure $\nu_\beta$ has exponential clustering in all four lattice directions.
+Also checked is an area law for rectangular Wilson loops: on the torus with constants independent of the torus size (for $441(1-e^{-2\beta})<1$), and in the limit $\nu_\beta$ (for $4096(1-e^{-2\beta})<1$).
+For $\beta\ge0$ and $441(1-e^{-2\beta})<1$, we check an upper bound on the difference of the twisted and untwisted partition functions on $(\Z/N)^2\times(\Z/M)^2$, relative to their sum, of the form $N^2(441(1-e^{-2\beta}))^{M^2}$ times a constant.
+We also check reflection positivity of the Wilson gauge weight multiplied by $\Re\det D_W^{2j}$ for the Wilson--Dirac operator.
+As auxiliary statements we also check the following for the concrete SU(2) measure: site and link-midplane reflection positivity and the chessboard estimate on even tori, and a Peierls-type bound on the probability that all plaquettes of a given set have $\Re U_p<0$.
+Site and link-midplane reflection positivity and the chessboard estimate are already present in a public Lean construction for general gauge groups.
+The Peierls-type bound is uniform over the tori $(\Z/2m)^4$, $m\ge2$, for $\beta\ge 81$ (a weak-coupling statement).
+The mathematics is classical: strong-coupling expansions, Dobrushin's comparison method, Osterwalder--Seiler reflection positivity and reconstruction, and Peierls arguments with chessboard estimates.
+Our coupling windows are narrower than those in the literature, and the contribution of this note is the machine check.
+Nothing is said about the continuum limit, about the existence of a continuum theory, or about a continuum mass gap.
+Every theorem of the correspondence table depends only on the axioms \texttt{propext}, \texttt{Classical.choice} and \texttt{Quot.sound}.
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+
+Four-dimensional Wilson lattice gauge theory at strong coupling (small $\beta$) is one of the settings in which much is known.
+Osterwalder and Seiler established the area law for Wilson loops at sufficiently small $\beta$ and the existence of a positive self-adjoint transfer matrix.
+For these results we rely on the account in \cite{Ch18}, \S\S4 and~6, which cites their 1978 paper in Ann.\ Phys.\ 110.
+More recently, a stochastic-analysis method has given at strong coupling the uniqueness of the invariant measure of the Langevin dynamics and a strictly positive mass gap for the infinite-volume measure \cite{SZZ}.
+Reflection positivity, the chessboard estimate and its use in Peierls arguments are standard tools \cite{FILS,Bis}.
+
+This note does not add to that mathematics. Its content is a Lean~4 development, built on Mathlib, in which a group of these results is stated for the concrete SU(2) Wilson measure on the four-dimensional periodic lattice and proved in Lean from the standard axioms only. The intended reader is one who wants to know exactly which statements have been machine-checked, under which hypotheses, and in which form.
+
+\paragraph{Position of this note.}
+\begin{itemize}[leftmargin=1.5em]
+\item The windows in which the strong-coupling statements hold are narrow. The infinite-volume limit and the transfer-operator bound use $18\tanh\beta<1$, i.e.\ $\beta<\tfrac12\ln\tfrac{19}{17}=0.05561\ldots$ in the normalisation $\exp(\beta\sum_p\Re U_p)$ with $\Re U=\frac12\tr U$. For SU(2) in $d=4$ the smallness condition of \cite{SZZ} reads $\beta<1/12=0.0833\ldots$ in the same normalisation (their action is $N\beta_{\mathrm{SZZ}}\Re\sum_p\tr Q_p$, so $\beta=4\beta_{\mathrm{SZZ}}$, and their condition (1.3) is $\beta_{\mathrm{SZZ}}<1/(16(d-1))$). The area-law window $4096(1-e^{-2\beta})<1$ is much smaller still ($\beta<1.22\cdot10^{-4}$).
+\item The Peierls bound of \S\ref{sec:peierls} is a weak-coupling statement ($\beta\ge 81$), with a threshold that comes from a crude lower bound on the Haar volume of a cap.
+\item Everything is at fixed lattice spacing. Nothing here bears on the continuum limit, on the existence of a continuum Yang--Mills theory, or on a continuum mass gap.
+\end{itemize}
+
+\paragraph{What is machine-checked.} The main statements are:
+\begin{enumerate}[leftmargin=1.8em]
+\item (Theorem~\ref{thm:infvol}) For $0<\beta$, $18\tanh\beta<1$: weak convergence of the whole sequence of periodically lifted torus measures to a measure $\nu_\beta$ on the configurations of $\Z^4$; convergence along tori of all sizes (Theorem~\ref{thm:allN}); invariance under the four unit translations; reflection positivity; an Osterwalder--Schrader reconstruction with $\|T-P_\Omega\|\le(18\tanh\beta)^{1/2}$ and $T\ge0$, both on all cylinder functions of the positive half and on the gauge-invariant ones; a non-degeneracy statement; and clustering in all four directions.
+\item (Theorems~\ref{thm:area}, \ref{thm:areainf}, \ref{thm:vortex}) The area law $|\langle\Re W(\partial(R\times T))\rangle|\le C(Kq)^{R\min(T,N-T)}$ on $(\Z/N)^4$ for rectangles at any position and in any coordinate plane, with $C$ independent of $N$; its version $\le C(Kq)^{RT}$ in the limit $\nu_\beta$; and the bound on twisted partition functions.
+\item (Theorem~\ref{thm:fermion}) Reflection positivity of the Wilson weight with a Wilson-fermion determinant, and positivity of the corresponding partition function.
+\end{enumerate}
+Auxiliary statements: site reflection positivity in each of the four directions for every real $\beta$, link-midplane reflection positivity for $\beta\ge0$, and the chessboard estimate on $(\Z/2m)^4$ (Theorems~\ref{thm:siterp}, \ref{thm:midrp}, \ref{thm:chess}). These are already present in a public Lean construction for general gauge groups (\S\ref{sec:prior}(a)) and are checked here for the concrete SU(2) measure. The two reflection-positivity statements are inputs to Theorems~\ref{thm:infvol} and~\ref{thm:peierls}. The Peierls-type rarity bound with the explicit threshold $\beta\ge81$ (Theorem~\ref{thm:peierls}) is also kept in this auxiliary position.
+
+Section~\ref{sec:prior} describes the relation to earlier formalisations. Section~\ref{sec:setting} fixes the objects. Sections~\ref{sec:rp}--\ref{sec:area} give the statements with all hypotheses, the Lean names, and an outline of how the Lean proofs proceed. Sections~\ref{sec:lean}--\ref{sec:table} give the bundle, what is not claimed, and the correspondence table.
+
+\section{Relation to earlier formalisations}\label{sec:prior}
+
+We list the Lean developments we know of that overlap with the present one, and state what we checked about each.
+
+\paragraph{(a) A construction of a continuum limit in Lean.}
+In November 2026 a Lean~4 development by OpenAI (\cite{OAI}, submitted 28 October 2026) and an assessment of it by the group that maintains \cite{YMG} (dated 10 November 2026) were made public. According to the assessment, the development establishes that a quantum field theory satisfying the Wightman axioms can be constructed as a scaling limit of four-dimensional Wilson lattice gauge theory for any simple compact gauge group, and it does not establish that the infinite-volume limit is unique or that there is a mass gap. Among further steps the assessment lists a uniform mass gap and the area law for Wilson loops. We read parts of the published source. For the Wilson measure with gauge group any closed subgroup of a unitary group, on periodic lattices of even side, it contains reflection positivity for cuts of two kinds, through lattice sites and through link midpoints, along any axis and for $\beta\ge0$ (\lean{YM\leandot{}Slice\leandot{}reflected\_positive}, with the cut kinds of \lean{YM\leansl{}Cells\leansl{}Cut\leandot{}lean}), and a chessboard estimate (\lean{YM\leandot{}Cells\leandot{}Tiling\leandot{}tiles} in \lean{YM\leansl{}Cells\leansl{}Chess\leandot{}lean}). This declaration takes the positivity of the cuts as a hypothesis and is combined with \lean{reflected\_positive} in \lean{YM\leansl{}Cells\leansl{}Certificate\leandot{}lean}. According to the assessment \cite{YMG}, the infinite-volume limit is obtained along subsequences by compactness. \emph{We therefore do not present reflection positivity through lattice hyperplanes or through link midplanes, the chessboard estimate, or the existence of subsequential infinite-volume limits as results of this note.} The forms checked here (\S\ref{sec:rp}) differ in details: site reflection positivity is checked for every real $\beta$, and the midplane statement is for gauge-invariant functions, or for functions of the open positive side. They are included because the other results of this note are built on them inside one development.
+
+\paragraph{(b) Strong-coupling decay on a finite torus.}
+The repository \texttt{lgt} of Douglas and Rajasekaran \cite{LGT} formalises U($n$) Wilson lattice gauge theory on $(\Z/N)^d$. According to its README, it contains a Lean proof of exponential decay of the connected plaquette--plaquette correlation on the finite torus for $\beta<1/(32n(d-1))$ by Dobrushin's method, using the Dobrushin-uniqueness library of Douglas \cite{MSG}, with only the three standard axioms. The README does not mention reflection positivity, a transfer matrix or an infinite-volume limit. The abstract of \cite{Nov} describes a machine-checked strong-coupling mass gap for \emph{U(1)} lattice gauge theory, by a polymer (character) expansion and a transfer-matrix argument. The project \texttt{pphi2} of Douglas and collaborators \cite{PP2} formalises the lattice $P(\Phi)_2$ measure on $(\Z/N)^2$. According to its README, it contains lattice reflection positivity and a transfer matrix with a Perron--Frobenius (Jentzsch) spectral input. It is a scalar field, it uses named project axioms (26, as counted in the README), and the README states that the reconstruction step itself is not formalised. We have read the project pages and the abstract, not the Lean sources. The finite-volume decay of \S\ref{sec:dob} below is of the same kind as \cite{LGT}, for SU(2) and with a different constant.
+
+\paragraph{(c) What is checked here and was not found elsewhere.}
+We list the statements of this note for which we did not find an earlier formalisation in the public sources we searched (web searches for Lean, Isabelle and Coq developments and for preprints, November 2026). They are: convergence of the whole sequence of lifted torus measures, for tori of all sizes, and translation invariance of the limit (Theorems~\ref{thm:infvol}, \ref{thm:allN}); the Osterwalder--Schrader reconstruction for a lattice gauge theory, from its infinite-volume limit, with the operator bound $\|T-P_\Omega\|\le(18\tanh\beta)^{1/2}$, $T\ge0$, and the gauge-invariant sector (Theorem~\ref{thm:infvol}(d),(e)); the area law on the torus and in the limit (Theorems~\ref{thm:area}, \ref{thm:areainf}); the bound on twisted partition functions (Theorem~\ref{thm:vortex}); the Peierls-type rarity of large plaquettes with an explicit threshold (Theorem~\ref{thm:peierls}); and reflection positivity of the Wilson weight multiplied by a Wilson-fermion determinant (Theorem~\ref{thm:fermion}). This reports the extent of our search only. A formalisation of the free Euclidean boson in four dimensions and of its Osterwalder--Schrader-type axioms \cite{DHMN} concerns the continuum axioms. The reconstruction here is the lattice one, from a reflection-positive measure to a Hilbert space and a transfer operator.
+
+\section{Setting}\label{sec:setting}
+
+\subsection{The lattice and the Wilson measure}
+
+For $N\ge1$ let $\Lambda_N=(\Z/N)^4$, with directions $0,1,2,3$; direction $0$ is called time. A link is a pair $\ell=(x,\mu)$, $x\in\Lambda_N$, $\mu\in\{0,1,2,3\}$, from $x$ to $x+e_\mu$. A plaquette is a triple $p=(x,\mu,\nu)$ with $\mu<\nu$; the set of plaquettes is $P_N$, $|P_N|=6N^4$. Link variables are quaternions $U_\ell$; SU(2) is realised as the unit sphere $S^3\subset\HH$ with its normalised Haar measure $h$ (Mathlib's \lean{Measure\leandot{}haarMeasure} normalised on the whole group). The plaquette holonomy is
+\[
+U_p=U_{(x,\mu)}\,U_{(x+e_\mu,\nu)}\,U_{(x+e_\nu,\mu)}^{*}\,U_{(x,\nu)}^{*},\qquad \Re U_p=\tfrac12\tr U_p\in[-1,1].
+\]
+In the files of \S\S\ref{sec:rp}--\ref{sec:area} (except Theorem~\ref{thm:fermion} and Theorem~\ref{thm:vortex}) a link variable takes values in the closed unit ball $B\subset\HH$, and the reference measure on a link is $h_B$, the image of $h$ under the inclusion $S^3\subset B$; configurations are therefore unit quaternions almost surely. The (unnormalised) Wilson measure and its normalisation are
+\[
+\mu_{N,\beta}(d\omega)=\exp\Bigl(\beta\sum_{p\in P_N}\Re U_p(\omega)\Bigr)\prod_{\ell}h_B(d\omega_\ell),\qquad
+\mathbb P_{N,\beta}=\mu_{N,\beta}(\cdot)/\mu_{N,\beta}(\text{all}),
+\]
+(\lean{TorusRP\leandot{}wilsonMeasure}, \lean{TorusRP\leandot{}wilsonProb}). The constant $e^{-\beta|P_N|}$ of the form $\exp(-\beta\sum_p(1-\Re U_p))$ cancels in $\mathbb P_{N,\beta}$.
+
+\subsection{Three realisations and the bridges between them}
+
+Two further realisations of the same measure occur. (i) For the twisted partition functions, the lattice is $(\Z/N)^2\times(\Z/M)^2$, links take values in $S^3$, the reference measure is the product of $h$, and plaquette signs $z_p\in\{\pm1\}$ enter the weight $\exp(\beta\sum_p z_p\Re U_p)$ (\lean{TwistedWilson\leandot{}ZW}). For $M=N$ and $z\equiv1$, the declaration \lean{WilsonBridge\leandot{}wilsonMeasure\_eq\_map} (\lean{Bridge\leansl{}WilsonTwistV1\leandot{}lean}) states that $\mu_{N,\beta}$ is the push-forward of this measure along the map that relabels the sites and includes $S^3$ in $B$; its total mass is $Z(0,0)$ (\lean{WilsonBridge\leandot{}wilsonMeasure\_univ}). (ii) For the fermion weight, the lattice is a time circle of length $2L_t$ times $(\Z/N)^3$, links take values in $S^3$ with the product of $h$, and the weight is $\exp(-\beta S_W)$ with $S_W=\sum_p(1-\Re U_p)$ (\lean{WilsonGauge\leandot{}wilsonAction}). For $N=2L_t>1$ the declaration \lean{WilsonGauge\leandot{}wilsonMeasure\_eq\_map} (\lean{Box\leansl{}FermionBaseV8a\leandot{}lean}) states that the torus Wilson measure equals $e^{6\beta(2L_t)^4}$ times the push-forward of this pure-gauge measure. That declaration refers to a copy of the torus definitions held in a module (\lean{Chain\leandot{}BoxWilsonV2}) that cannot be imported together with \lean{Lattice\leandot{}TorusDecV2}. The definitions of the ball, the reference measure, the holonomy, the action and the Wilson measure in the two modules are textually identical, but in Lean they are distinct constants.
+
+\subsection{Coupling windows}
+
+We write $t(\beta)=18\tanh|\beta|$; in Lean this is \lean{WilsonLimit\leandot{}dobConst}$\,\beta=18\,(e^{2|\beta|}-1)/(e^{2|\beta|}+1)$. The condition $t(\beta)<1$ is $|\beta|<\tfrac12\ln\tfrac{19}{17}=0.05561\ldots$. Lean checks that $|\beta|<1/19$ implies $t(\beta)<1$ (\lean{WilsonLimit\leandot{}dob\_window\_strict}). We also write $q(\beta)=1-e^{-2\beta}$. The area-law windows are $4096\,q<1$ ($\beta<1.2208\ldots\cdot10^{-4}$) and $441\,q<1$ ($\beta<1.1350\ldots\cdot10^{-3}$). These decimal values are ours, not Lean's. Lean checks that the hypotheses are satisfiable: $\beta=1/20$ lies in $t(\beta)<1$ (\lean{WilsonLimit\leandot{}dob\_example}) and $\beta=10^{-5}$ lies in both $t(\beta)<1$ and $4096q<1$ (\lean{AreaLaw\leandot{}sanity\_window\_infvol}).
+
+\subsection{The configuration space of \texorpdfstring{$\Z^4$}{Z4} and the lifted measures}
+
+Let $\Omega_\infty=B^{\,\Z^4\times\{0,1,2,3\}}$ with the product topology (compact). The periodic lift $\pi_N:B^{\Lambda_N\times4}\to\Omega_\infty$ sets $(\pi_N\omega)_{(x,\mu)}=\omega_{(x\bmod N,\mu)}$. Put $N_n=2(n+1)$ and $\mathbb Q_{n,\beta}=(\pi_{N_n})_*\mathbb P_{N_n,\beta}$ (\lean{WilsonLimit\leandot{}liftProb}). The time reflection $\theta$ on $\Omega_\infty$ is induced by $x_0\mapsto-x_0$ on sites; a time link from $x$ goes to the time link from $\theta x-e_0$ with its value replaced by the quaternion conjugate, and spatial links keep their values (\lean{WilsonLimit\leandot{}zRefl}). The shift $\tau$ is $(\tau\omega)_\ell=\omega_{\ell+e_0}$, and $S_i^k$ is the shift by $k$ steps in direction $i$. Let
+$\mathcal W$ be the set of $F\in C_b(\Omega_\infty)$ for which there are a finite set $S$ of links and $R\in\N$ such that every link of $S$ has base point with $0\le x_0\le R$ and $F$ depends only on the links of $S$
+(\lean{WilsonLimit\leandot{}Wsub}), and $\mathcal W_{\mathrm{gi}}\subset\mathcal W$ the subspace of functions invariant under all gauge transformations $\omega_{(x,\mu)}\mapsto g(x)\,\omega_{(x,\mu)}\,g(x+e_\mu)^*$, $g:\Z^4\to S^3$ (\lean{GaugeZ\leandot{}Wgi}).
+
+\subsection{Reconstruction data}
+
+A reconstruction datum (\lean{OSGap\leandot{}Datum}) on a real vector space $V$ consists of a symmetric positive semidefinite bilinear form $B$, a linear map $\tau$ symmetric for $B$, and a vector $\mathbf 1$ with $B(\mathbf 1,\mathbf 1)=1$, $\tau\mathbf 1=\mathbf 1$, such that $k\mapsto B(\tau^kx,\tau^kx)$ is bounded for every $x$. From it Lean builds the completion $\mathcal H$ of $V$ for the seminorm $B(x,x)^{1/2}$, the canonical map $x\mapsto[x]$, the vacuum $\Omega=[\mathbf 1]$, and the transfer operator $T$, the continuous extension of $\tau$ (a contraction). For $m\in\R$, \lean{HasMassGap}$\,m$ is the statement $\|T-P_\Omega\|\le e^{-m}$ with $P_\Omega v=\langle\Omega,v\rangle\Omega$. In this note $m$ is measured in lattice units of time.
+
+\section{Reflection positivity}\label{sec:rp}
+
+Throughout this section, except in Theorem~\ref{thm:fermion}, $N=2M$. On $\Lambda_N$ the site reflection $\Theta$ is $x_0\mapsto-x_0$ (planes $x_0=0$ and $x_0=M$), acting on time links as in \S\ref{sec:setting}; the closed positive half consists of the spatial links with $0\le x_0\le M$ and the time links with base time $0\le x_0<M$.
+
+\begin{theorem}[Site reflection positivity in each direction]\label{thm:siterp}
+Let $N=2M$, $\beta\in\R$, $\rho\in\{0,1,2,3\}$, and let $f$ be a bounded measurable function of the configuration that depends only on the links whose image under the exchange of the directions $0$ and $\rho$ lies in the closed positive half. Then $\int f(\Theta_\rho\omega)f(\omega)\,\mu_{N,\beta}(d\omega)\ge0$, where $\Theta_\rho$ is $\Theta$ conjugated by that exchange.
+\end{theorem}
+Lean: \lean{PeierlsPerm\leandot{}wilson\_rp\_dir}; the case $\rho=0$ is \lean{TorusRP\leandot{}wilson\_rp}. The Lean proof factorises the weight as $e^{\beta A_+(\omega)}e^{\beta A_+(\Theta\omega)}$, with plaquettes in the planes counted with weight $\frac12$, and applies an abstract reflection-positivity lemma for product measures with a factorised weight. The other directions follow from invariance of the measure under relabelling the directions. No condition on the sign of $\beta$ is needed.
+
+Let $\Theta'$ be the reflection $x_0\mapsto1-x_0$ (planes $x_0=\frac12$ and $x_0=M+\frac12$), with conjugation on time links. The crossing links are the time links from $x_0=0$ and from $x_0=M$; the open positive side consists of the spatial links with $1\le x_0\le M$ and the time links with base time $1\le x_0\le M-1$.
+
+\begin{theorem}[Link-midplane reflection positivity]\label{thm:midrp}
+Let $N=2M$, $M\ge2$, $\beta\ge0$.
+\begin{enumerate}[label=(\roman*),leftmargin=2em]
+\item If $F$ is bounded, measurable, depends only on the crossing links and the open positive side, and is invariant under every gauge transformation $g:\Lambda_N\to S^3$, then $\int F(\omega)F(\Theta'\omega)\,\mu_{N,\beta}(d\omega)\ge0$.
+\item If $H$ is bounded, measurable and depends only on the open positive side, then $\int H(\Theta'\omega)H(\omega)\,\mathbb P_{N,\beta}(d\omega)\ge0$.
+\end{enumerate}
+\end{theorem}
+Lean: (i) \lean{MidRP\leandot{}wilson\_rp\_mid}, (ii) \lean{FullT\leandot{}full\_rp\_torus}. For (i) Lean fixes the gauge so that the crossing links are $1$, splits the action into the two sides and the crossing plaquettes, writes the exponential of the crossing part as a sum of products $\psi(\omega)\psi(\Theta'\omega)$, and applies a kernel form of reflection positivity. Part (ii) averages $H$ over two independent gauge transformations, uses Fubini and gauge invariance of the measure, and applies (i) to the averaged function.
+
+\begin{theorem}[Reflection positivity with a Wilson-fermion determinant]\label{thm:fermion}
+Let $N\ge1$, $L_t\ge1$, $j\in\N$, $m>-1$, $\beta\in\R$. On the lattice with a time circle of length $2L_t$ and space $(\Z/N)^3$, let $D_W$ be the Wilson--Dirac operator with Wilson parameter $r=1$, bare mass $m$, colour group SU(2) in its defining representation, and antiperiodic boundary conditions in all four directions. Split a configuration $\omega$ into $(c,a_+,a_-)$: the spatial links on the planes $t=0$ and $t=L_t$, the links of the positive side, and the reflected links of the negative side. Then for every bounded measurable $\varphi(c,a_+)$,
+\[
+\int \varphi(c,a_+)\,\varphi(c,a_-)\,e^{-\beta S_W(\omega)}\,\Re\bigl((\det D_W(\omega))^{2j}\bigr)\prod_\ell h(d\omega_\ell)\ \ge\ 0,
+\]
+and $\int e^{-\beta S_W}\,\Re((\det D_W)^{2j})\prod h>0$ for every $\beta,m\in\R$ and every $j$.
+\end{theorem}
+Lean: \lean{WilsonGauge\leandot{}site\_reflection\_positive\_wilson\_full} and \lean{WilsonGauge\leandot{}partition\_pos\_wilson\_full}. In Lean the weight is \lean{fermWeight}, in which $D_W$ appears as the matrix \lean{std4} assembled from the split data. The identification with the Wilson--Dirac operator in the physical link variables is made by two further declarations. The first, \lean{WilsonGauge\leandot{}physDirac\_eq\_split}, states that the operator \lean{physDirac}, defined on the unsplit configuration, equals this \lean{std4} matrix. The second, \lean{WilsonGauge\leandot{}physDirac\_apply}, writes the entries of \lean{physDirac} as those of the Wilson--Dirac operator ($m+4$ on the diagonal, hopping terms $-\frac12(1\mp\gamma_\mu)U$ with the antiperiodic signs). The Lean proof rests on a block form of $D_W$ across the two reflection planes, $\det D_W=\det\begin{pmatrix}X&A_1\\-A_2&X'^{*}\end{pmatrix}$. Here $X$ and $X'$ depend on the two sides, and $A_1$ (positive definite for $m>-1$) and $A_2$ (positive semidefinite) depend on the planes. A Cauchy--Binet argument shows that $(X',X)\mapsto\det$ of this block matrix is a positive semidefinite kernel, and the proof combines this with the factorisation of the gauge weight. The determinant of \lean{physDirac} is invariant under global gauge transformations (\lean{GaugeDet\leandot{}physDirac\_det\_conj}). Through \lean{physDirac\_eq\_split} this invariance applies to the determinant in the weight. Reflection positivity of lattice gauge theories with Wilson fermions is a classical subject. We have not been able to consult its original sources and do not cite them.
+
+\section{Chessboard estimate and rarity of large plaquettes}\label{sec:peierls}
+
+On $\Lambda_N$, $N=2m$, the blocks are the $N^4$ unit cubes $w+[0,1]^4$, $w\in\Lambda_N$. For each $w$ there is a map $\Psi_w$ of configurations, a product over the four directions of a translation $x_d\mapsto x_d+w_d$ ($w_d$ even) or a reflection $x_d\mapsto w_d+1-x_d$ ($w_d$ odd), which carries the cube at the origin to the cube at $w$. A block function is a bounded measurable function of the links of the cube at the origin (\lean{FoldWilson\leandot{}Base}).
+
+\begin{theorem}[Chessboard estimate]\label{thm:chess}
+Let $N=2m$, $m\ge1$, $\beta\in\R$, let $(H_i)_{i\in I}$ be block functions and $F:\Lambda_N\to I$. With $V(F)=\int\prod_{w}H_{F(w)}(\Psi_w\omega)\,\mu_{N,\beta}(d\omega)$,
+\[
+|V(F)|^{N^4}\le\prod_{w\in\Lambda_N}V(\text{the constant family }F(w)).
+\]
+\end{theorem}
+Lean: \lean{FoldWilson\leandot{}wilson\_chessboard\_even}. The chessboard estimate is the classical consequence of reflection positivity \cite{FILS,Bis}. The Lean proof first treats a torus of even side in one direction, by a maximum argument over the finitely many families with values in the range of $F$: folding at a plane does not decrease $|V|^{n}/\prod(V(\text{const})+\varepsilon)$, and repeated folds reach a constant family. It then iterates over the four directions. The input is the Cauchy--Schwarz inequality of the reflected pairing, obtained from Theorem~\ref{thm:siterp} and translation invariance.
+
+For $y\in\R$ call a plaquette \emph{large} if $1-\Re U_p>y$. For $r>0$ let $v(r)=h\{U\in S^3:\|U-1\|<r\}$ (the Haar volume of a cap).
+
+\begin{theorem}[Rarity of large plaquettes with an explicit threshold]\label{thm:peierls}
+Let $\beta\ge81$ and $q_1=e^{\beta(48/400-1)}/v(1/20)^4=e^{-0.88\beta}/v(1/20)^4$. Then $q_1<1$, and for every $m\ge2$, $N=2m$, and every set $X\subseteq P_N$,
+\[
+\int\prod_{p\in X}\mathbf 1[\Re U_p<0]\;\mu_{N,\beta}(d\omega)\ \le\ \mu_{N,\beta}(\text{all})\cdot q_1^{\lfloor|X|/6\rfloor}.
+\]
+\end{theorem}
+Lean: \lean{FoldCap\leandot{}rarity\_explicit}. Since $\mu_{N,\beta}(\text{all})>0$ (\lean{FoldMix\leandot{}Zw\_pos}, for $\beta\ge0$), the theorem says that all plaquettes of $X$ have $\Re U_p<0$ with $\mathbb P_{N,\beta}$-probability at most $q_1^{\lfloor|X|/6\rfloor}$, uniformly in $N$.
+
+\emph{Outline of the Lean proof.} (1) A mixed chessboard estimate, with lattice-plane reflections in the two directions of a plaquette orientation and link-midplane reflections in the two transverse directions. The second kind requires gauge-invariant block functions, and the indicator of a large plaquette is gauge invariant (Theorem~\ref{thm:midrp}(i)). (2) Energy: on the event that all $N^4$ plaquettes of one orientation are large, $\sum_p\Re U_p\le|P_N|-yN^4$. (3) Entropy: if every link lies within distance $r$ of $1$, then $1-\Re U_p\le8r^2$ for every plaquette, so $\mu_{N,\beta}(\text{all})\ge e^{\beta|P_N|(1-8r^2)}v(r)^{4N^4}$. (4) Together, for one orientation and any set $S$ of sites, the bound $\mu_{N,\beta}(\text{all})\,q^{|S|}$ with $q=e^{\beta(48r^2-y)}/v(r)^4$ (\lean{FoldMix\leandot{}rarity\_orient}, $m\ge2$, $\beta\ge0$, $r>0$). For an arbitrary $X$ with $q\le1$, one orientation carries at least $\lfloor|X|/6\rfloor$ plaquettes (\lean{FoldMix\leandot{}rarity\_all\_mix}). (5) Covering $S^3$ by the normalised points of the grid $\frac1K\Z^4\cap[-1,1]^4$ gives $v(r)\ge(2K+1)^{-4}$ for $2/K<r$ (\lean{FoldCap\leandot{}ballQ\_ge}). With $K=41$ this gives $v(1/20)\ge83^{-4}$, and $e^{-0.88\cdot81}\cdot83^{16}<1$. The threshold $81$ reflects the crude covering bound and is far from the physically relevant range of $\beta$.
+
+\section{Strong-coupling decay on the torus}\label{sec:dob}
+
+For a link $y$ and a time $t_0$, $d(y)$ is the cyclic time distance of $y$ from $t_0$.
+
+\begin{theorem}[Decay of covariances in the time distance]\label{thm:dob}
+Let $N\ge1$, $\beta\in\R$, $\lambda\ge0$ with $e^{\lambda}\,t(\beta)<1$. Let $F$ be bounded by $c_F$, measurable, and dependent only on links at time distance $\le r$ from $t_0$; let $G$ be bounded and measurable, with $|G(\omega)-G(\omega')|\le\delta_y$ whenever $\omega,\omega'$ differ only at the link $y$. Then
+\[
+\bigl|\mathbb E_{N,\beta}[FG]-\mathbb E_{N,\beta}[F]\,\mathbb E_{N,\beta}[G]\bigr|\le 2c_F\,e^{\lambda r}\sum_y e^{-\lambda d(y)}\delta_y .
+\]
+\end{theorem}
+Lean: \lean{LinkSpec\leandot{}wilson\_cov\_dist}. In this declaration the expectation is written as a Gibbs average, equal to the integral against $\mathbb P_{N,\beta}$ by \lean{WilsonLimit\leandot{}integral\_wilsonProb\_gibbs}. The constants do not depend on $N$. \emph{Outline.} The Wilson measure is a Gibbs measure for the single-link heat-bath specification (one-link DLR identity, \lean{Spec\leansl{}LinkDLRV2\leandot{}lean}). The Dobrushin influence of a link $y$ on a link $x$ is at most $\tanh(|\beta|n_{xy})\le n_{xy}\tanh|\beta|$, where $n_{xy}$ is the number of plaquettes containing both, and $\sum_{y\ne x}n_{xy}\le18$ (six plaquettes through a link, three further links each). The comparison is carried out by iterating heat-bath sweeps over the links outside the support of $F$ with weights $e^{\lambda d(y)}$. Each sweep contracts a weighted oscillation by the factor $e^\lambda t(\beta)$. A second form with the window $24(1-e^{-4|\beta|})<1$ is \lean{TorusRP\leandot{}wilson\_strong\_coupling}.
+
+\section{The infinite-volume limit and the transfer operator}\label{sec:infvol}
+
+\begin{theorem}[Strong-coupling infinite-volume limit and reconstruction]\label{thm:infvol}
+Let $\beta>0$ with $18\tanh\beta<1$ and put $m_\beta=-\tfrac12\ln(18\tanh\beta)>0$. There is a probability measure $\nu_\beta$ on $\Omega_\infty$ such that:
+\begin{enumerate}[label=(\alph*),leftmargin=2em]
+\item $\mathbb Q_{n,\beta}\to\nu_\beta$ weakly as $n\to\infty$ (the whole sequence);
+\item $\int F\circ S_i^1\,d\nu_\beta=\int F\,d\nu_\beta$ for every $F\in C_b(\Omega_\infty)$ and each direction $i$;
+\item $\int F(\theta\omega)F(\omega)\,\nu_\beta(d\omega)\ge0$ for every $F\in\mathcal W$;
+\item there is a reconstruction datum on $\mathcal W$ with $B(F,G)=\int F(\theta\omega)G(\omega)\,\nu_\beta(d\omega)$, $\tau F=F\circ\tau$, $\mathbf 1=1$, such that $\|T-P_\Omega\|\le e^{-m_\beta}=(18\tanh\beta)^{1/2}$; $B(F_0,F_0)-B(\mathbf 1,F_0)^2\ge e^{-12\beta}/4$ for $F_0(\omega)=\Re\omega_{\ell_0}$, $\ell_0$ the spatial link from the origin in direction $1$; there is a unit vector orthogonal to $\Omega$; $T[F_0]=0$; and $\langle v,Tv\rangle\ge0$ for all $v\in\mathcal H$;
+\item there is a reconstruction datum on $\mathcal W_{\mathrm{gi}}$, defined by the same formulas, with $\|T-P_\Omega\|\le e^{-m_\beta}$, $B(F_p,F_p)-B(\mathbf 1,F_p)^2\ge e^{-12\beta}/4$ for $F_p=\Re U_p$ with $p$ the plaquette at the origin in the plane of the directions $1,2$, a unit vector orthogonal to $\Omega$, and $\langle v,Tv\rangle\ge0$ for all $v$;
+\item for each direction $i$, all $F,G\in C_b(\Omega_\infty)$ depending only on links in finite sets $S_F,S_G$ whose base points satisfy $0\le x_i\le R$, and all $k\ge R$,
+\[
+\Bigl|\int F\cdot(G\circ S_i^k)\,d\nu_\beta-\int F\,d\nu_\beta\int G\circ S_i^k\,d\nu_\beta\Bigr|\le4\|F\|_\infty\|G\|_\infty|S_G|\,e^{-m_\beta(k-R)}.
+\]
+\end{enumerate}
+\end{theorem}
+Lean: \lean{InfMain2\leandot{}wilson\_infvol\_main2}. The Lean statement is phrased with $\exists!$. The uniqueness of a weak limit is the Hausdorff property of the space of probability measures and carries no information, so we state existence. The content of (a) is convergence of the whole sequence, not uniqueness of Gibbs measures.
+
+\emph{Outline of the Lean proof.} (a) For a cylinder function $F$ with support in a box of radius $R_0$, and $K$ heat-bath sweeps of a box of radius $L_b\ge R_0$ on $\Z^4$, every torus with $n\ge L_b+1$ satisfies $|\mathbb E_{\mathbb Q_{n,\beta}}F-c_{K,L_b}|\le(\alpha^K+e^{-\lambda(L_b+1)})\,2\|F\|\,|S|\,e^{\lambda R_0}$. Here $\alpha=e^\lambda t(\beta)$, and $c_{K,L_b}$ is the value of the $K$ sweeps on $\Z^4$ at a constant configuration, the same number for all $n$ (\lean{InfVol\leandot{}lift\_close}): on a large torus the heat bath at a link near the origin agrees with the heat bath on $\Z^4$. So $n\mapsto\int F\,d\mathbb Q_{n,\beta}$ is Cauchy for every cylinder function. Since $\Omega_\infty$ is compact and cylinder functions determine a finite measure on it (finite-dimensional marginals and Mathlib's uniqueness of projective limits), the whole sequence converges (\lean{CylDet\leandot{}tendsto\_of\_cyl\_cauchy}). (b) Each torus measure is translation invariant, and the property passes to the limit. (c) Theorem~\ref{thm:siterp} on the torus, passed to the limit. (d) The decay bound $B(\tau^kF,\tau^kF)-B(\mathbf 1,F)^2\le C_F e^{-2m_\beta k}$ follows from Theorem~\ref{thm:dob} on the tori, uniformly in $n$, and passes to the limit. An abstract lemma then gives $\|T-P_\Omega\|\le e^{-m_\beta}$ on the completion (\lean{OSGap\leandot{}Datum\leandot{}hasMassGap\_of\_decay}). The variance bound comes from the one-link DLR identity: the local action lies in $[-6\beta,6\beta]$, and $\int(\Re U-c)^2\,dh\ge\frac14$ for every $c$. We have $T[F_0]=0$ because the gauge transformation equal to the centre element $-1$ at one site and to $1$ elsewhere preserves the measure, changes the sign of $\Re\omega$ at a link of $\tau F_0$, and leaves $G\circ\theta$ unchanged for $G\in\mathcal W$ (\lean{CenterFlip\leandot{}limit\_zero}). $T\ge0$: $\langle[F],T[F]\rangle=\int F(\theta\omega)F(\tau\omega)$, and on the torus the site reflection and the midplane reflection $\Theta'$ differ by the unit time shift, so Theorem~\ref{thm:midrp}(ii) applies (\lean{FullT\leandot{}wilson\_Tpos\_full}). (e) The same on $\mathcal W_{\mathrm{gi}}$, with Theorem~\ref{thm:midrp}(i) for $T\ge0$ (\lean{MidT\leandot{}wilson\_Tpos\_gauge}). (f) The decay of Theorem~\ref{thm:dob} with the cyclic distance of the $i$-th coordinate in place of the time distance, passed to the limit (\lean{WilsonLimit\leandot{}cluster\_limit}).
+
+\begin{remark}
+In (d), $T[F_0]=0$ says that the vector $[F_0]$ which witnesses $\mathcal H\ne\R\Omega$ in the full space is annihilated by $T$; it does not witness a non-zero spectrum of $T$ on $\Omega^\perp$. In (e), the bound on $\|T-P_\Omega\|$ is an upper bound; Lean does not exclude $T=P_\Omega$ on $\mathcal H_{\mathrm{gi}}$. Thus $m_\beta$ is a lower bound for the mass in lattice units, and no positive upper bound on the mass is claimed.
+\end{remark}
+
+\begin{theorem}[The limit does not depend on the torus sizes]\label{thm:allN}
+Let $\beta\ne0$ with $18\tanh|\beta|<1$, and let $\mathbb Q'_{m,\beta}$ be the periodic lift of $\mathbb P_{m+1,\beta}$ (tori of every size, odd or even). Then there is a probability measure $\nu$ on $\Omega_\infty$ such that $\mathbb Q_{n,\beta}\to\nu$, $\mathbb Q'_{m,\beta}\to\nu$, and $\mathbb Q'_{s(k),\beta}\to\nu$ for every sequence $s(k)\to\infty$, all weakly.
+\end{theorem}
+For $\beta>0$ this $\nu$ is the measure $\nu_\beta$ of Theorem~\ref{thm:infvol}, since both are weak limits of $\mathbb Q_{n,\beta}$. This last identification is ours and is not a separate Lean statement.
+Lean: \lean{AllN\leandot{}wilson\_infvol\_allN}. The estimate of (a) above holds with the same numbers $c_{K,L_b}$ for every torus of size $m+1>2(L_b+1)$.
+
+\section{The area law and twisted partition functions}\label{sec:area}
+
+For $1\le R,T<N$, a corner $a\in\Lambda_N$ and directions $\mu\ne\nu$, let $\partial(R\times T)$ be the boundary of the $R\times T$ rectangle with corner $a$, sides $R$ along $\mu$ and $T$ along $\nu$, as a closed path of links, and $W$ the ordered product of the link variables along it (inverse on backward links).
+
+\begin{theorem}[Area law on the torus]\label{thm:area}
+Let $N\ge1$, $\beta\ge0$, $1\le R<N$, $1\le T<N$, $a\in\Lambda_N$, $\mu\ne\nu$. If $441\,q<1$ with $q=1-e^{-2\beta}$, then
+\[
+\bigl|\mathbb E_{N,\beta}\Re W(\partial(R\times T))\bigr|\le\frac{6\,(441q)^{R\min(T,N-T)}}{441(1-441q)}.
+\]
+If $4096\,q<1$, the same holds with $(6,441)$ replaced by $(16,4096)$.
+\end{theorem}
+Lean: \lean{AreaLaw\leandot{}area\_law\_wilson\_general\_sharp} and \lean{AreaLaw\leandot{}area\_law\_wilson\_general}; for the rectangle with corner $0$ in the plane $(0,1)$, \lean{AreaLaw\leandot{}area\_law\_wilson} ($16,4096$) and \lean{AreaLaw\leandot{}area\_law\_wilson\_max\_sharp}, which has the exponent $\max(R\min(T,N-T),\,T\min(R,N-R))$. For $2T\le N$ the exponent is the area $RT$. The constants do not depend on $N$.
+
+\emph{Outline of the Lean proof.} (1) Mixture: $e^{\beta\Re U_p}=e^{-\beta}(1+\sigma_p)$ with $0\le\sigma_p\le e^{2\beta}-1$, and the product over plaquettes is expanded over subsets $X\subseteq P_N$. (2) Centre flips: multiplying the links of a set by $-1$ preserves the Haar measure and multiplies $W$ by a sign. If the mod-$2$ link content of the loop is not in the span of the mod-$2$ boundaries of the plaquettes of $X$, the term of $X$ vanishes (\lean{AreaLaw\leandot{}integral\_word\_mul\_prod\_eq\_zero\_of\_not\_mem\_span}). (3) Domination: for weights with $Z(S\cup\{p\})\le tZ(S)$, $\sum_{X\supseteq Y}Z(X)\le(t/(1+t))^{|Y|}\sum_XZ(X)$; here $t/(1+t)=q$. Hence $|\mathbb E\Re W|\le\sum_Yq^{|Y|}$ over the minimal spanning sets $Y$. (4) Every minimal spanning set is connected through shared links and contains a plaquette through a fixed link of the loop (\lean{AreaLaw\leandot{}minSpan\_rect\_conn}). It has at least $R\min(T,N-T)$ plaquettes, by pairing with the cochains of direction-$0$ links in each column (for the rectangle with corner $0$ in the plane $(0,1)$). (5) Rooted connected sets of size $n$ are vertex sets of closed walks of length $2(n-1)$. With at most $6$ plaquettes through a link and $21$ plaquettes sharing a link with a given one (itself included), the number of such sets is at most $6\cdot441^{n-1}$. The coarser count $16\cdot64^{2(n-1)}$ gives the second form. (6) A geometric tail. The general corner and plane follow from translation invariance and relabelling of directions.
+
+On $\Z^4$ let $\partial(R\times T)$ be the rectangle with corner $0$, sides $R$ along direction $0$ and $T$ along direction $1$, and $W_\infty$ its Wilson loop, a continuous function on $\Omega_\infty$ of finitely many links.
+
+\begin{theorem}[Area law in infinite volume]\label{thm:areainf}
+Let $\beta>0$ with $18\tanh\beta<1$ and $4096(1-e^{-2\beta})<1$. Then there is a probability measure $\nu$ with $\mathbb Q_{n,\beta}\to\nu$ weakly (the measure $\nu_\beta$ of Theorem~\ref{thm:infvol}), and for all $R,T\ge1$
+\[
+\Bigl|\int\Re W_\infty(\partial(R\times T))\,d\nu\Bigr|\le\frac{16\,(4096q)^{RT}}{4096(1-4096q)}.
+\]
+The same bound holds, for $\beta\ge0$ and $4096q<1$, at every weak limit of a subsequence $\mathbb Q_{\varphi(n),\beta}$.
+\end{theorem}
+Lean: \lean{AreaLaw\leandot{}area\_law\_infvol}. The Lean statement gives a weak limit $\nu$ with the bound; that $\nu$ is the measure $\nu_\beta$ of Theorem~\ref{thm:infvol} follows from the uniqueness of weak limits and is not a separate Lean statement. The subsequence form is \lean{AreaLaw\leandot{}area\_law\_limit\_sub}. The infinite-volume statement in the bundle is for the rectangle at the origin in the plane $(0,1)$. We do not state it for other positions or planes. The proof applies the $(16,4096)$ form of Theorem~\ref{thm:area} with $2T\le N$ on the tori $N_n\ge 2T$, $N_n>R$, and passes to the weak limit.
+
+\paragraph{Twisted partition functions.} On $\Lambda_{N,M}=(\Z/N)^2\times(\Z/M)^2$, let $Z(n_{12},n_{34})=\int\exp(\beta\sum_pz_p\Re U_p)\prod h$, where $z_p=-1$ on the plaquettes of the plane $(0,1)$ with $(x_0,x_1)=(0,0)$ if $n_{12}=1$, on the plaquettes of the plane $(2,3)$ with $(x_2,x_3)=(0,0)$ if $n_{34}=1$ (there are $N^2$ of the latter), and $z_p=1$ otherwise (\lean{TwistedWilson\leandot{}ZW}). In the usual language, $n_{34}$ is an 't~Hooft twist through the $(2,3)$ torus.
+
+\begin{theorem}[Twisted partition functions at strong coupling]\label{thm:vortex}
+Let $N,M\ge1$, $\beta\ge0$, $441(1-e^{-2\beta})<1$, and $n_{12}\in\{0,1\}$. Then
+\[
+|Z(n_{12},0)-Z(n_{12},1)|\le N^2\,\frac{(441q)^{M^2}}{441(1-441q)}\,\bigl(Z(n_{12},0)+Z(n_{12},1)\bigr).
+\]
+\end{theorem}
+Lean: \lean{VortexStrongMN\leandot{}vortex\_floor\_MN\_sharp}. The proof repeats steps (1)--(6) above with plaquette signs: centre sign fields act on the weights through the plaquette characters. Sets $X$ on which the twist is a product of plaquette characters give equal contributions to $Z(n_{12},0)$ and $Z(n_{12},1)$. Any other set meets all $M^2$ translates of the twist set in the $(2,3)$ torus, is connected when minimal, and is counted from a root in the twist set ($N^2$ choices). The rate $441q$ does not depend on $N$ or $M$; the prefactor $N^2$ does. The sign of $Z(n_{12},0)-Z(n_{12},1)$ is not determined. For $N=M$ on $(\Z/N)^4$ the analogous statement in the realisation of \S\ref{sec:setting} is \lean{VortexStrong\leandot{}vortex\_floor\_sharp}.
+
+\section{What is machine-checked}\label{sec:lean}
+
+{\sloppy The statements of \S\S\ref{sec:rp}--\ref{sec:area} are declarations of one Lean~4 package (Lean v4.33.1, Mathlib v4.33.1, commit \texttt{0df444a3}; 400 modules), distributed as one bundle in the repository \url{https://github.com/yoshikazuhosomura-sys/lattice-yang-mills}: its directory \texttt{lean/\allowbreak{}ym-three-volumes-\allowbreak{}2026-11-13} holds the archive \texttt{principia-\allowbreak{}ym-three-volumes-\allowbreak{}2026-11-13.tar.gz} (sha256 \texttt{f8a44451\allowbreak{}7b2f013a\allowbreak{}287ec200\allowbreak{}75977cb0\allowbreak{}afa71c01\allowbreak{}9de2d3c3\allowbreak{}da577118\allowbreak{}c05aea62}), its checksum file \texttt{principia-\allowbreak{}ym-three-volumes-\allowbreak{}2026-11-13.tar.gz.sha256} and the axiom log \texttt{axioms-\allowbreak{}ym-three-volumes-\allowbreak{}2026-11-13.txt}. To verify: extract the bundle; run \texttt{lake exe cache get}; then, in the order of the import column of \texttt{MODULES.tsv} (dependencies first), compile each module with \texttt{LEAN\_NUM\_THREADS=1 lake env lean -o <dir>/<module>.olean <file>}, adding \texttt{<dir>} to \texttt{LEAN\_PATH}; then run \texttt{lake env lean} on the files \texttt{checks/AxAll\_*.lean} and \texttt{checks/AxNew\_*.lean}, which contain a \texttt{\#check} and a \texttt{\#print axioms} line for each listed declaration, and compare with the axiom log. This module-by-module compilation, followed by a re-check of every compiled module with Lean's kernel checker (\texttt{leanchecker}), is how the bundle was checked when it was made. Building with \texttt{lake build} through the \texttt{lakefile.lean} of the bundle has not been tried. Most source files of the declarations of Table~\ref{tab:corr} also end with \texttt{\#print axioms} lines for their own declarations. The exceptions are \lean{TorusRP\leandot{}wilson\_rp}, \lean{WilsonGauge\leandot{}wilsonMeasure\_eq\_map}, \lean{OSGap\leandot{}Datum\leandot{}HasMassGap} and \lean{WilsonLimit\leandot{}dobConst}; the axioms of the first three are recorded only in the axiom log and the check files. The bundle contains no \texttt{sorry}, no \texttt{admit}, no \texttt{native\_decide} and no \texttt{axiom} declaration (lexical search). Every declaration of Table~\ref{tab:corr} except the definition \lean{WilsonLimit\leandot{}dobConst} is a line of the axiom log, and each of these depends exactly on \texttt{propext}, \texttt{Classical.choice} and \texttt{Quot.sound}.\par}
+
+Some modules of the bundle hold copies of the same declarations under the same names and cannot be imported together. No module imports both members of such a pair, and the check files keep them apart. This is why the bridge of \S\ref{sec:setting} for the fermion realisation refers to a copy of the torus definitions (\lean{Chain\leandot{}BoxWilsonV2}) rather than to \lean{Lattice\leandot{}TorusDecV2}. Several declarations named in the text are not lines of the axiom log. For the following, the only record of their axioms is the \texttt{\#print axioms} line at the end of their own file: \lean{CenterFlip\leandot{}limit\_zero}, \lean{MidT\leandot{}wilson\_Tpos\_gauge}, \lean{WilsonLimit\leandot{}dob\_example} and \lean{AreaLaw\leandot{}sanity\_window\_infvol} (the two satisfiability checks of \S\ref{sec:setting}), \lean{FoldMix\leandot{}rarity\_prob} (a probability form whose threshold is given only by existence; it is not the explicit form of Theorem~\ref{thm:peierls}), and \lean{WilsonLimit\leandot{}integral\_wilsonProb\_gibbs}. The first two are also dependencies of \lean{InfMain2\leandot{}wilson\_infvol\_main2}, which is a line of the log. For \lean{FoldMix\leandot{}Zw\_pos} (\S\ref{sec:peierls}) and the definitions \lean{WilsonLimit\leandot{}dobConst} and \lean{FoldWilson\leandot{}Base} there is neither a line of the log nor a \texttt{\#print axioms} line of their own. The declaration \lean{Zw\_pos} is a dependency of \lean{FoldMix\leandot{}rarity\_prob}.
+
+What Lean checks is the implication from the hypotheses stated in Lean to the conclusions stated in Lean. That the Lean definitions (\S\ref{sec:setting}) are the usual objects is a matter of reading them; we have quoted them in the form in which they appear in the source.
+
+\section{What is not claimed}\label{sec:notclaimed}
+\begin{itemize}[leftmargin=1.5em]
+\item Nothing about the continuum limit, the existence of a four-dimensional Yang--Mills theory, or a continuum mass gap. The lattice spacing is fixed throughout.
+\item No result is claimed to be new as mathematics. The coupling windows are narrower than those available in the literature (\S\ref{sec:intro}); $18\tanh\beta<1$ is a sufficient condition chosen for the proof.
+\item Theorem~\ref{thm:infvol} is not a uniqueness statement for infinite-volume Gibbs measures: it is the convergence of one family of periodic finite-volume measures (Theorem~\ref{thm:allN} extends it to all sizes). Other boundary conditions are not treated.
+\item The mass statement is a lower bound $m\ge m_\beta$ in lattice units, in the sense $\|T-P_\Omega\|\le e^{-m_\beta}$. No positive upper bound on the mass and no statement about the spectrum of $T$ on $\Omega^\perp$ beyond this norm bound are claimed (see the remark after Theorem~\ref{thm:infvol}).
+\item The area law is an upper bound only. No lower bound and no statement about a string tension in any limit are claimed. On the torus, for $T>N/2$, the exponent $R\min(T,N-T)$ is smaller than the area. In infinite volume only the rectangle at the origin in the plane $(0,1)$ is stated.
+\item In Theorem~\ref{thm:vortex} the prefactor $N^2$ remains, and the sign of $Z(n_{12},0)-Z(n_{12},1)$ is not determined.
+\item The Peierls bound (Theorem~\ref{thm:peierls}) is a single-scale statement at $\beta\ge81$; it is empty for $|X|<6$ and is stated for $m\ge2$ only.
+\item Theorem~\ref{thm:fermion} is a positivity property of the weight. No consequence for the fermionic theory (decay, a transfer matrix, a gap) is formalised, and gauge invariance of the determinant under local gauge transformations is not stated.
+\item Reflection positivity through lattice planes and through link midplanes, the chessboard estimate, and subsequential infinite-volume limits are also present in the development of \cite{OAI}, for closed subgroups of unitary groups (\S\ref{sec:prior}). They are not results of this note.
+\end{itemize}
+
+\section{Correspondence table}\label{sec:table}
+
+All files are paths in the bundle; the line is that of the declaration.
+
+{\small
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.40\textwidth}>{\raggedright\arraybackslash}p{0.29\textwidth}@{}}
+\caption{Statements of this note and Lean declarations.}\label{tab:corr}\\
+\toprule
+Statement & Lean declaration & File:line \\ \midrule
+\endfirsthead
+\toprule
+Statement & Lean declaration & File:line \\ \midrule
+\endhead
+\bottomrule
+\endfoot
+Thm~\ref{thm:siterp}, $\rho=0$ & \lean{TorusRP\leandot{}wilson\_rp} & \lean{Lattice\leansl{}TorusDecV2\leandot{}lean:847} \\
+Thm~\ref{thm:siterp} & \lean{PeierlsPerm\leandot{}wilson\_rp\_dir} & \lean{Peierls\leansl{}PermRPV2\leandot{}lean:174} \\
+Thm~\ref{thm:midrp}(i) & \lean{MidRP\leandot{}wilson\_rp\_mid} & \lean{Lattice\leansl{}MidRPV2\leandot{}lean:249} \\
+Thm~\ref{thm:midrp}(ii) & \lean{FullT\leandot{}full\_rp\_torus} & \lean{Infvol\leansl{}FullTV2\leandot{}lean:211} \\
+Thm~\ref{thm:fermion} (RP) & \lean{WilsonGauge.site\_reflection\_\allowbreak{}positive\_wilson\_full} & \lean{Gauge\leansl{}WilsonFullV7c\leandot{}lean:377} \\
+Thm~\ref{thm:fermion} ($Z>0$) & \lean{WilsonGauge\leandot{}partition\_pos\_wilson\_full} & \lean{Gauge\leansl{}WilsonFullV7c\leandot{}lean:416} \\
+\S\ref{sec:rp}, global gauge invariance of $\det D_W$ & \lean{GaugeDet\leandot{}physDirac\_det\_conj} & \lean{FermionLane\leansl{}GaugeDetV9c\leandot{}lean:274} \\
+Thm~\ref{thm:fermion}, $D_W$ = \lean{std4} & \lean{WilsonGauge\leandot{}physDirac\_eq\_split} & \lean{Gauge\leansl{}WilsonFullV7c\leandot{}lean:479} \\
+Thm~\ref{thm:fermion}, entries of $D_W$ & \lean{WilsonGauge\leandot{}physDirac\_apply} & \lean{Gauge\leansl{}DirectEntriesV7a\leandot{}lean:33} \\
+Thm~\ref{thm:chess} & \lean{FoldWilson\leandot{}wilson\_chessboard\_even} & \lean{FoldChess\leansl{}WilsonChessV1\leandot{}lean:118} \\
+Thm~\ref{thm:peierls} & \lean{FoldCap\leandot{}rarity\_explicit} & \lean{FoldChess\leansl{}ExplicitV1\leandot{}lean:47} \\
+\S\ref{sec:peierls}, step (4) & \lean{FoldMix\leandot{}rarity\_all\_mix} & \lean{FoldChess\leansl{}MixAllV1\leandot{}lean:74} \\
+\S\ref{sec:peierls}, step (5) & \lean{FoldCap\leandot{}ballQ\_ge} & \lean{FoldChess\leansl{}CapV1\leandot{}lean:149} \\
+Thm~\ref{thm:dob} & \lean{LinkSpec\leandot{}wilson\_cov\_dist} & \lean{Sweep\leansl{}DistDecayV1\leandot{}lean:364} \\
+\S\ref{sec:dob}, second form & \lean{TorusRP\leandot{}wilson\_strong\_coupling} & \lean{Lattice\leansl{}TorusDecV2\leandot{}lean:1967} \\
+Thm~\ref{thm:infvol} & \lean{InfMain2\leandot{}wilson\_infvol\_main2} & \lean{Infvol\leansl{}MainV2\leandot{}lean:23} \\
+Thm~\ref{thm:infvol}(a) & \lean{InfVol\leandot{}wilson\_infvol\_unique} & \lean{Infvol\leansl{}CauchyV2\leandot{}lean:196} \\
+Thm~\ref{thm:infvol}(a),(b) & \lean{TransI\leandot{}wilson\_infvol\_translation} & \lean{Infvol\leansl{}TransV2\leandot{}lean:113} \\
+Thm~\ref{thm:infvol}(d), subsequence form & \lean{WilsonLimit\leandot{}wilson\_massGap\_dob\_exists} & \lean{Lattice\leansl{}WilsonDobV1\leandot{}lean:187} \\
+Thm~\ref{thm:infvol}(d), $T\ge0$ & \lean{FullT\leandot{}wilson\_Tpos\_full} & \lean{Infvol\leansl{}FullTV2\leandot{}lean:317} \\
+Thm~\ref{thm:infvol}(e), subsequence form & \lean{GaugeZ\leandot{}wilson\_massGap\_gauge\_exists} & \lean{Lattice\leansl{}GaugeSectorV1\leandot{}lean:436} \\
+Thm~\ref{thm:infvol}(f), subsequence form & \lean{WilsonLimit\leandot{}cluster\_limit} & \lean{Lattice\leansl{}ClusterV1\leandot{}lean:180} \\
+Thm~\ref{thm:allN} & \lean{AllN\leandot{}wilson\_infvol\_allN} & \lean{Infvol\leansl{}AllNV1\leandot{}lean:160} \\
+Thm~\ref{thm:area}, $441$ & \lean{AreaLaw\leandot{}area\_law\_wilson\_general\_sharp} & \lean{Area\leansl{}SharpConstV1\leandot{}lean:217} \\
+Thm~\ref{thm:area}, $4096$ & \lean{AreaLaw\leandot{}area\_law\_wilson\_general} & \lean{Area\leansl{}RectMoveV1\leandot{}lean:168} \\
+Thm~\ref{thm:area}, corner $0$ & \lean{AreaLaw\leandot{}area\_law\_wilson} & \lean{Area\leansl{}AreaMainV1\leandot{}lean:63} \\
+Thm~\ref{thm:area}, max exponent & \lean{AreaLaw\leandot{}area\_law\_wilson\_max\_sharp} & \lean{Area\leansl{}ExponentMaxV1\leandot{}lean:89} \\
+Thm~\ref{thm:areainf} & \lean{AreaLaw\leandot{}area\_law\_infvol} & \lean{Area\leansl{}InfVolV2\leandot{}lean:122} \\
+Thm~\ref{thm:areainf}, subsequences & \lean{AreaLaw\leandot{}area\_law\_limit\_sub} & \lean{Area\leansl{}InfVolSubV1\leandot{}lean:21} \\
+Thm~\ref{thm:vortex} & \lean{VortexStrongMN\leandot{}vortex\_floor\_MN\_sharp} & \lean{Area\leansl{}VortexMNSharpV1\leandot{}lean:137} \\
+Thm~\ref{thm:vortex}, $(\Z/N)^4$ & \lean{VortexStrong\leandot{}vortex\_floor\_sharp} & \lean{Area\leansl{}SharpConstV1\leandot{}lean:275} \\
+\S\ref{sec:setting}, bridge (i) & \lean{WilsonBridge\leandot{}wilsonMeasure\_eq\_map} & \lean{Bridge\leansl{}WilsonTwistV1\leandot{}lean:145} \\
+\S\ref{sec:setting}, bridge (i), total mass & \lean{WilsonBridge\leandot{}wilsonMeasure\_univ} & \lean{Bridge\leansl{}WilsonTwistV1\leandot{}lean:191} \\
+\S\ref{sec:setting}, bridge (ii) & \lean{WilsonGauge\leandot{}wilsonMeasure\_eq\_map} & \lean{Box\leansl{}FermionBaseV8a\leandot{}lean:562} \\
+\S\ref{sec:setting}, $t(\beta)$ & \lean{WilsonLimit\leandot{}dobConst} (def.) & \lean{Lattice\leansl{}WilsonDobV1\leandot{}lean:23} \\
+\S\ref{sec:setting}, mass gap & \lean{OSGap\leandot{}Datum\leandot{}HasMassGap} (def.) & \lean{Lattice\leansl{}GapG\leandot{}lean:809} \\
+\end{longtable}
+}
+
+
+\section{Use of AI}\label{sec:ai}
+
+This research was carried out with the assistance of Claude Code (Anthropic). The Lean~4 development including the formalised statements, the literature search and this text were developed with the AI system under the author's direction. Separate sessions of the system then re-checked the Lean development and compared the text with it. The author reviewed the arguments, checked the Lean development and its axiom logs, and takes full responsibility for the content.
+
+This note has not been refereed. The separate sessions mentioned in this section belong to the same AI system and share its blind spots. What the Lean kernel checks is checked; everything else rests on the author's word. In particular, the reading of the Lean definitions as the usual objects (\S\ref{sec:setting}) and the outlines of the proofs in the text are not checked by Lean. For the bundle as a whole, the axiom log has been regenerated in a separate run and agrees with the log \texttt{axioms-\allowbreak{}ym-three-volumes-\allowbreak{}2026-11-13.txt} kept beside the archive.
+
+\paragraph{Revision history.} Revised 2026-11-15: the text was rewritten for readability. In addition: the abstract and the introduction no longer call the chessboard estimate and the Peierls-type bound inputs to the main results, and the introduction now says only that the two reflection-positivity statements are inputs to Theorems~\ref{thm:infvol} and~\ref{thm:peierls}; \S\ref{sec:rp} excepts Theorem~\ref{thm:fermion} from the convention $N=2M$; the text after Theorem~\ref{thm:areainf} says that the identification of the limit with $\nu_\beta$ is not a separate Lean statement; \S\ref{sec:lean} says which form \lean{FoldMix\leandot{}rarity\_prob} is; and two truncated decimals are marked as such. The statements of the theorems, the proofs and the tables are unchanged.
+
+\appendix
+\section{The main Lean statement, transcribed}\label{app:main}
+
+For reference we transcribe the statement of \lean{InfMain2\leandot{}wilson\_infvol\_main2} (\lean{Infvol\leansl{}MainV2\leandot{}lean}, line~23) into ASCII: \texttt{R} is $\R$, \texttt{integral x, f x d(nu)} is the Bochner integral against the measure underlying \texttt{nu}, \texttt{inner} is the real inner product, \texttt{norm} the norm, and \texttt{Cfg ->b R} the bounded continuous functions. The source file is authoritative.
+
+{\small
+\begin{verbatim}
+theorem wilson_infvol_main2 (beta : R) (hbeta : 0 < beta)
+    (hq : dobConst beta < 1) :
+  exists! nu : ProbabilityMeasure Cfg,
+    Tendsto (fun n => liftProb beta n) atTop (nhds nu) /\
+    (forall (i : Fin 4) (F : Cfg ->b R),
+      integral x, F (zShI i 1 x) d(nu) = integral x, F x d(nu)) /\
+    (forall F in Wsub, 0 <= integral x, F (zRefl x) * F x d(nu)) /\
+    (exists D : Datum Wsub,
+      (forall F G : Wsub, D.B F G = integral x, F (zRefl x) * G x d(nu)) /\
+      (forall F : Wsub, D.tau F = shiftMap zShiftC F) /\
+      D.one = 1 /\
+      D.HasMassGap (-Real.log (dobConst beta) / 2) /\
+      Real.exp (-(12 * |beta|)) / 4
+        <= D.B F0 F0 - (D.B D.one F0) ^ 2 /\
+      (exists v : D.Hilb, inner v D.Omega = 0 /\ norm v = 1) /\
+      D.T (D.emb F0) = 0 /\
+      forall v : D.Hilb, 0 <= inner v (D.T v)) /\
+    (exists D : Datum Wgi,
+      ... the clauses for D.B, D.tau, D.one and D.HasMassGap as above,
+      ... the variance bound for Fp,
+      ... a unit vector orthogonal to D.Omega,
+      forall v : D.Hilb, 0 <= inner v (D.T v)) /\
+    (forall (i : Fin 4) (F G : Cfg ->b R) (SF SG : Finset ZLk) (R : Nat),
+      (forall l in SF, 0 <= l.1 i /\ l.1 i <= R) ->
+      (forall l in SG, 0 <= l.1 i /\ l.1 i <= R) ->
+      (forall x y, (forall l in SF, x l = y l) -> F x = F y) ->
+      (forall x y, (forall l in SG, x l = y l) -> G x = G y) ->
+      forall k : Nat, R <= k ->
+        | integral x, F x * G (zShI i k x) d(nu)
+          - (integral x, F x d(nu)) * integral x, G (zShI i k x) d(nu) |
+        <= 4 * norm F * norm G * SG.card
+           * Real.exp (-((-Real.log (dobConst beta) / 2) * (k - R))))
+\end{verbatim}
+}
+Coercions (from \texttt{Wsub} and \texttt{Wgi} to functions, from \texttt{F0} to its subtype element) are omitted. Here \texttt{dobConst beta} is $18(e^{2|\beta|}-1)/(e^{2|\beta|}+1)$, \texttt{liftProb beta n} is the periodic lift of the normalised Wilson measure on $(\Z/2(n+1))^4$, \texttt{zRefl} is the time reflection, \texttt{zShI i k} the shift by $k$ in direction $i$, \texttt{shiftMap zShiftC} composition with the unit time shift, \texttt{F0} the function $\Re\omega_{\ell_0}$ and \texttt{Fp} the plaquette function of Theorem~\ref{thm:infvol}(e).
+
+\begin{thebibliography}{99}
+\bibitem{Bis} M.~Biskup, \emph{Reflection positivity and phase transitions in lattice spin models}, in: R.~Koteck\'y (ed.), Methods of Contemporary Mathematical Statistical Physics, Lecture Notes in Math.\ 1970, Springer, 2009, 1--86; arXiv:math-ph/0610025 (arXiv version consulted).
+\bibitem{Ch18} S.~Chatterjee, \emph{Yang--Mills for probabilists}, arXiv:1803.01950 (2018) (arXiv version consulted).
+\bibitem{DHMN} M.~R.~Douglas, S.~Hoback, A.~Mei, R.~Nissim, \emph{Formalization of QFT}, arXiv:2603.15770 (2026).
+\bibitem{LGT} M.~R.~Douglas, F.~Rajasekaran, \emph{lgt: Lattice gauge theory in Lean~4}, \url{https://github.com/mrdouglasny/lgt} (2026; README consulted).
+\bibitem{MSG} M.~R.~Douglas, \emph{markov-semigroups} (Lean~4), \url{https://github.com/mrdouglasny/markov-semigroups} (2026; project page consulted).
+\bibitem{FILS} J.~Fr\"ohlich, R.~Israel, E.~H.~Lieb, B.~Simon, \emph{Phase transitions and reflection positivity. I. General theory and long range lattice models}, Comm.\ Math.\ Phys.\ 62 (1978), 1--34 (abstract and bibliographic record consulted; the text not consulted directly).
+\bibitem{Nov} A.~Novickis, \emph{A machine-checked proof of the strong-coupling mass gap in U(1) lattice gauge theory}, Zenodo, \url{https://zenodo.org/records/21000045} (v4, 2026; abstract consulted).
+\bibitem{OAI} OpenAI, \emph{OpenAI-YM-20261028} (Lean~4 development), \url{https://github.com/yang-mills-group/OpenAI-YM-20261028} (made public 10 November 2026).
+\bibitem{PP2} M.~R.~Douglas et al., \emph{pphi2} (Lean~4), \url{https://github.com/mrdouglasny/pphi2} (2026; README consulted).
+\bibitem{SZZ} H.~Shen, R.~Zhu, X.~Zhu, \emph{A stochastic analysis approach to lattice Yang--Mills at strong coupling}, Comm.\ Math.\ Phys.\ 400 (2023), 805--851; arXiv:2204.12737.
+\bibitem{YMG} yang-mills-group, \emph{YM --- Pure Yang--Mills results and verification}, including the assessment dated 10 November 2026 of the submission \cite{OAI}, \url{https://github.com/yang-mills-group/YM}.
+\end{thebibliography}
+\end{document}
