@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite the paper concerned and this repository."
+title: "Lattice Yang–Mills theory: papers and Lean 4 formalisations"
+abstract: "Twelve papers on four-dimensional SU(2) lattice gauge theory and on related model problems, with the Lean 4 developments that check their machine-checked statements. No continuum limit and no mass gap of four-dimensional Yang–Mills theory is claimed."
+authors:
+  - family-names: Hosomura
+    given-names: Yoshikazu
+keywords:
+  - lattice gauge theory
+  - Yang–Mills theory
+  - Lean 4
+  - formal verification
+license: Apache-2.0
+version: 1.0.0
+date-released: 2026-11-15
+repository-code: https://github.com/yoshikazuhosomura-sys/lattice-yang-mills
