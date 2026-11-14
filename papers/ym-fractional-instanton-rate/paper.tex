@@ -1,0 +1,498 @@
+%% GitHub edition: papers/ym-fractional-instanton-rate of the repository lattice-yang-mills.
+\documentclass[11pt,a4paper]{article}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper,top=27mm,bottom=27mm,left=28mm,right=28mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={An area-law bound for SU(2) lattice gauge theory on a twisted small torus whose rate is the action of a flux-carrying column},pdfauthor={Yoshikazu Hosomura}}
+\usepackage{url}
+
+\newtheorem{theorem}{Theorem}
+\renewcommand{\thetheorem}{\Alph{theorem}}
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{proposition}[lemma]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[lemma]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[lemma]{Remark}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\code}[1]{\texttt{#1}}
+\setlength{\emergencystretch}{3em}
+
+\title{An area-law bound for SU(2) lattice gauge theory on a twisted small torus whose rate is the action of a flux-carrying column}
+\author{Yoshikazu Hosomura}
+\date{Version 2, 2026-11-14 (version 1: 2026-10-15; text revised 2026-11-15)}
+
+\begin{document}
+\maketitle
+\begin{center}\small Independent researcher, Japan · wvbks0 [at] gmail.com\end{center}
+\begin{center}\small The use of AI is described in \S\ref{sec:ai}; what is not claimed is in \S\ref{sec:notclaimed}; the changes from version 1 are listed at the end.\end{center}
+
+\begin{abstract}
+We consider four-dimensional SU(2) Wilson lattice gauge theory on $T^2_N\times T^2_M$ with an 't~Hooft twist $n_{12}=1$ on the small torus $T^2_N$.
+The quantity we study is the bias $\theta(N,M,\beta)=(Z(0)-Z(1))/(Z(0)+Z(1))$ between the two sectors of the flux $n_{34}$ through the large plane.
+For all $N,M\ge1$ and $\beta>0$, a comparison with a two-dimensional $\mathbb{Z}_2$ gauge theory gives $|\theta|\le\tanh(N^2\beta)^{M^2}$, an area law whose rate in $\beta$ is $2N^2$ (thin vortex sheet).
+For every $N\ge2$, block size $\ell\ge2$, $\beta\ge1$ and $M\in2\ell\mathbb{N}$, we show that $\theta\le\exp(-c\,\beta^{-a}e^{-\beta(S_*(N,\ell)+\varepsilon(\beta))}M^2)$ with $\varepsilon(\beta)=O(\sqrt{\ln\beta/\beta})$.
+Here $S_*(N,\ell)$ is the minimal Wilson action of the $n_{34}$-twisted column $T^2_N\times[0,\ell]^2$ with its frame frozen to the twist-eater vacuum.
+The constants $c$ and $a$, and the constant in $\varepsilon$, depend on $N$ and $\ell$.
+One rigidity constant is shown to exist but is not explicit, and the proof of this bound quotes the chessboard estimate.
+A second form of the bound is checked in Lean~4 with Mathlib and uses no chessboard estimate: with $S_N=\inf_\ell S_*(N,\ell)$, for every $\varepsilon>0$, $|\theta|\le\exp(-M^2e^{-\beta(S_N+\varepsilon)})$ for all sufficiently large $\beta$ and, for each such $\beta$, all sufficiently large $M$.
+The thresholds are not explicit.
+Lean also checks $S_N>0$ and, through kernel-checked certificates for explicit rational configurations, $S_N<6.675,\ 9.094,\ 12.021$ for $N=2,3,4$, against $2N^2=8,18,32$.
+At fixed $M$ the exponential rate of $-\ln\theta$ in $\beta$ equals $S_{\min}(N,M)$, the minimal action of the sector $(n_{12},n_{34})=(1,1)$.
+Moreover $\theta\ge0$ for every even $M$ and every $\beta$.
+Both statements have their main step in Lean.
+At the semiclassical level $S_*$ is the action of a lattice fractional instanton confined to a column.
+The identification $\lim_\ell S_*(N,\ell)=\lim_M S_{\min}(N,M)$ is not proved, so the fractional-instanton action enters only as an upper bound on the $M$-uniform rate.
+Apart from the weak bound $S_{\min}(N,N)\ge\frac12$, nothing here is uniform in $N$, and nothing bears on the continuum limit or on a mass gap.
+\end{abstract}
+
+\section{Setting}\label{sec:setting}
+
+\paragraph{Motivation.}
+Compactifying two directions of four-dimensional SU(2) Yang--Mills theory on a small torus with 't~Hooft flux $n_{12}=1$ removes the classical zero modes [tH81].
+At the semiclassical level the cheapest objects carrying flux $n_{34}$ through the remaining plane are fractional instantons of topological charge $\frac12$ and action $4\pi^2/g^2=\pi^2\beta$ ($\beta=4/g^2$), localised in the plane [GAM, TU].
+At the same level, a dilute gas of them gives an area law with string tension proportional to $e^{-\pi^2\beta}$ up to a prefactor [TU].
+This paper asks how much of this picture can be proved on the lattice at fixed $N$, uniformly in the size $M$ of the plane.
+
+\paragraph{Lattice and sectors.}
+The lattice is $\Lambda=(\mathbb{Z}/N)^2\times(\mathbb{Z}/M)^2$, with SU(2) link variables $U$ and normalised Haar measure $dU$.
+The plaquette action is $S^z_p(U)=1-\frac12 z_p\tr U_p\in[0,2]$, and the weight is $e^{-\beta S^z(U)}$ with $S^z=\sum_pS^z_p$.
+The background twist $n_{12}=1$ sets $z_p=-1$ on one $(1,2)$-plaquette in each $(1,2)$-plane.
+Sector $n_{34}=1$ in addition sets $z_p=-1$ on a sheet $\Pi_q$ of the $N^2$ $(3,4)$-plaquettes over a unit square $q$ of the plane.
+With $Z(0),Z(1)$ the two partition functions and $\Delta F=\ln(Z(0)/Z(1))$,
+\[ \theta(N,M,\beta)=\frac{Z(0)-Z(1)}{Z(0)+Z(1)}=\tanh\frac{\Delta F}{2}. \]
+Through the Tomboulis--Yaffe inequality [TY] this bias controls Wilson loops in the large plane.
+We do not use that inequality.
+The twist-eater vacuum $U^0$ (unique up to gauge transformations) has holonomies $i\sigma_1,i\sigma_2$ around the two cycles of $T^2_N$, all links in directions $3,4$ equal to $1$, and $S^z(U^0)=0$ in sector $n_{34}=0$.
+In sector $(n_{12},n_{34})=(1,1)$ no configuration has action $0$, so the minimal action $S_{\min}(N,M)$ of that sector is positive (Lean: \code{TwistFlat.no\_flat\_twist11}, \code{TwistFlat.minDefect11\_pos}).
+This minimal action is at most $2N^2$, as the vacuum with one thin sheet shows (on paper).
+
+\paragraph{What we call the rate.}
+For fixed $N$ and $M$, the rate is the exponential rate in $\beta$ of $-\ln\theta$, i.e.\ the limit of $-\beta^{-1}\ln(-\ln\theta)$ as $\beta\to\infty$.
+Corollary~\ref{cor:C} shows that this limit exists.
+A bound $-\ln\theta\ge c\,e^{-\beta S}M^2$ uniform in $M$ is an area law at fixed $N$ with rate at most $S$.
+We call $S$ the $M$-uniform rate of such a bound.
+
+\paragraph{Limits stated in advance.}
+(i) The identification of $S_*$ with a fractional instanton is made at the semiclassical level only. The theorems are about the lattice quantities $S_*$, $S_N$ and $S_{\min}$.
+(ii) No statement is uniform in $N$, except the weak bound $S_{\min}(N,N)\ge\frac12$ of \S\ref{sec:numbers}.
+(iii) In Theorem~\ref{thm:A} the rigidity constant $c_R(N,\ell)$ is shown to exist. Its value is not explicit, and so neither is the value of $\beta$ beyond which Theorem~\ref{thm:A} improves the thin-sheet bound. In Theorem~\ref{thm:D} the thresholds in $\beta$ and $M$ are not explicit.
+(iv) The identification $\lim_\ell S_*(N,\ell)=\lim_MS_{\min}(N,M)$ (property (G2) of \S\ref{sec:notclaimed}) is not proved. Wherever the $M$-uniform rate is described as the fractional-instanton action, this is an upper bound unless (G2) is assumed, and we say so in the statement.
+(v) The chessboard estimate is quoted, not re-derived, and is used only in the proof of Theorem~\ref{thm:A}.
+
+\paragraph{Blocks, frames, columns.}
+Fix $\ell\ge2$ and $M=K\ell$ with $K$ even.
+The plane is tiled by closed squares $D_t$, $t\in T=(\mathbb{Z}/K)^2$, so $|T|=M^2/\ell^2$.
+A link is a \emph{skeleton link} if its projection to the plane lies on the grid $\{x_3\in\ell\mathbb{Z}\}\cup\{x_4\in\ell\mathbb{Z}\}$.
+The \emph{interior links} of $t$ are the non-skeleton links projecting into $D_t$; there are $n_B=2N^2(\ell-1)(2\ell-1)$ of them.
+The \emph{frame} $\Sigma_t$ is the set of skeleton links projecting into $\partial D_t$.
+As a cell complex it is $T^2_N\times C_{4\ell}$, and its $2$-cells are the \emph{frame plaquettes}.
+Every plaquette either has only skeleton links, or has an interior link of exactly one block $t$ and all its other links in $\Sigma_t$ (Lemma~\ref{lem:partition}).
+Write $P_t$ for the latter plaquettes.
+Let $S^\pm_t(\Sigma,U_{\rm int})=\sum_{p\in P_t}S^{z^\pm}_p$, where $z^-$ carries an extra sheet $\Pi_{q_t}$ over a unit square $q_t\subset D_t$, and
+\[ Z^\pm_t(\Sigma)=\int\prod_{\mathrm{int}(t)}dU\,e^{-\beta S^\pm_t},\qquad \theta_t(\Sigma)=\frac{Z^+_t-Z^-_t}{Z^+_t+Z^-_t},\qquad m^\pm_t(\Sigma)=\min S^\pm_t(\Sigma,\cdot). \]
+We write $A_t(\Sigma)$ for the action of the frame plaquettes of $t$, and $A_{\rm sk}$ for the action of the plaquettes all of whose links are skeleton links.
+
+\begin{definition}\label{def:Sstar}
+$S_*(N,\ell):=m^-_t(\Sigma^0)$, where $\Sigma^0$ is the restriction of $U^0$ to the frame: the minimal action of the $n_{34}$-twisted column with its frame frozen to the vacuum. $S_N:=\inf_{\ell\ge2}S_*(N,\ell)$.
+\end{definition}
+
+Constants: $c_0=8/(3\pi^3)$, $L_\partial=N^2(12\ell-8)$, $L(\beta)=4N^2\ell^2(12\ln\beta+34)+8\ln2$.
+
+\section{The same quantities in Lean}\label{sec:dict}
+
+The Lean statements cited below are about the following objects (bundle of \S\ref{sec:lean}). We record why they are the quantities of \S\ref{sec:setting}. The auxiliary declarations named in this section are in the bundle's source files; the theorems used as results are listed in Table~\ref{tab:lean}.
+
+\paragraph{Weight and twists.}
+SU(2) is the group of unit quaternions with normalised Haar measure, and $\mathrm{Re}\,U=\frac12\tr U$.
+The partition function is \code{TwistedWilson.ZW}$\,=\int\exp(\beta\sum_pz_p\,\mathrm{Re}\,U_p)$, which equals $e^{\beta|P|}\int e^{-\beta S^z}$ with $|P|=6N^2M^2$ the number of plaquettes.
+The factor $e^{\beta|P|}$ is the same in both sectors and cancels in $\theta$ and in $\Delta F$.
+The signs \code{TwistedWilson.zt} put $n_{12}$ on the $(1,2)$-plaquettes at $(x_1,x_2)=(0,0)$ for every $(x_3,x_4)$ and $n_{34}$ on the $(3,4)$-plaquettes at $(x_3,x_4)=(0,0)$ for every $(x_1,x_2)$, as in \S\ref{sec:setting} with $q=(0,0)$.
+\code{TwistBlocks.thetaM}$\,N\,M\,\beta$ is $\theta(N,M,\beta)$ (background $n_{12}=1$).
+
+\paragraph{Vacuum.}
+\code{TwistBlocks.vac} sets the direction-$1$ links at $x_1=0$ to the quaternion $i$, the direction-$2$ links at $x_2=0$ to $j$, and all other links to $1$. This is a twist eater with holonomies $(i,j)$, and on each slice it is a gauge transform of $U^0$ (\code{TwistBlocks.rigidT\_all}). Since $m^\pm_t$ is invariant under gauge transformations of the frame (proof of Lemma~\ref{lem:good}), $S_*$ does not depend on this choice. The action of \code{TwistBlocks.vac} is $0$ in sector $(1,0)$ (\code{TwistBlocks.vac\_term}).
+
+\paragraph{Column action.}
+\code{TwistBlocks.Svortex}$\,N\,\ell$ is defined on the lattice with $M=2\ell$, cut into four blocks of side $\ell$, as follows.
+The frame links are set to the vacuum; these are the links on the lines $x_3$ or $x_4\in\{0,\ell\}$, by the same rule as the skeleton links.
+One $(3,4)$-sheet at the corner of block $(0,0)$ is flipped.
+The action summed over the plaquettes whose base point $(x_3,x_4)$ lies in $[0,\ell-1]^2$ is then minimised over the interior links of that block.
+Every non-frame link of a plaquette belongs to the block of the plaquette's base point (\code{TwistBlocks.blk\_l1}--\code{blk\_l4}).
+This sum therefore consists of $P_t$ and of some plaquettes all of whose links are frame links.
+With the frame at the vacuum the latter have action $0$ (\code{TwistBlocks.actB\_vac\_one}). Hence \code{Svortex}$\,N\,\ell=S_*(N,\ell)$ for $\ell\ge2$.
+For $\ell=1$ there are no interior links and the value is $2N^2$ (\code{TwistBlocks.actB\_vac\_flip}).
+Since $S_*(N,\ell)\le2N^2$, it follows that \code{TwistBlocks.SN}$\,N=\inf_{\ell\ge1}$\code{Svortex}$\,N\,\ell=S_N$.
+
+\paragraph{Minimal action of sector $(1,1)$.}
+\code{TwistFlat.defect11}$\,\omega=\sum_p(1-z_p\,\mathrm{Re}\,U_p)$ with both twists, i.e.\ $S^z$ of sector $(1,1)$.
+Further, \code{ThetaLimit.Smin}$\,N\,M=\inf_\omega$\code{defect11}$\,\omega=S_{\min}(N,M)$, and the infimum is attained (\code{TwistFlat.defect11\_floor}).
+
+\section{Theorem A: the rate at fixed $N$, explicit form}\label{sec:A}
+
+\begin{theorem}[explicit area law with the column rate]\label{thm:A}
+Let $N\ge2$, $\ell\ge2$, $\beta\ge1$ and $M\in2\ell\mathbb{N}$, and let $c_R=c_R(N,\ell)>0$ be the rigidity constant of Lemma~\ref{lem:rigid} (shown to exist, not explicit). Then
+\[ \theta(N,M,\beta)\le\exp\Big(-\frac{M^2}{2\ell^2}\,c_0^{\,n_B}e^{-6n_B}\beta^{-3n_B}\exp\big(-\beta S_*(N,\ell)-L_\partial\sqrt{\beta L(\beta)/c_R}\big)\Big). \]
+$S_*(N,\ell)$ may be replaced by the column action of any explicit configuration with vacuum frame.
+\end{theorem}
+
+Since $M$ is even, $\theta\ge0$ (Proposition~\ref{prop:sign}).
+Hence for every such $M$ the bound reads $-\ln\theta\ge c(N,\ell)\beta^{-a}e^{-\beta(S_*(N,\ell)+\varepsilon(\beta))}M^2$ (with $-\ln0=+\infty$), where $a=3n_B$ and $\varepsilon(\beta)=L_\partial\sqrt{L(\beta)/(c_R\beta)}$.
+
+\subsection{Exact column representation}
+
+\begin{lemma}[partition of plaquettes]\label{lem:partition}
+Every plaquette lies either in $P_{\rm sk}$ (all links skeleton) or in exactly one $P_t$, and every $p\in P_t$ has all its links in $\mathrm{int}(t)\cup\Sigma_t$.
+\end{lemma}
+\begin{proof}
+The projection $\pi(p)$ to the plane is a vertex ($(1,2)$-plaquettes), an edge ($(\mu,3)$, $(\mu,4)$, $\mu\le2$) or a unit square ($(3,4)$), and the links of $p$ project onto faces of $\pi(p)$.
+If $\pi(p)$ lies in the grid, all links are skeleton.
+Otherwise $\pi(p)$ lies in a unique closed square $D_t$, and $p$ has a link whose projection leaves the grid (for a unit square, one of its four edges is off the grid because $\ell\ge2$).
+In that case the links of $p$ projecting into the grid project into $D_t\cap\text{grid}=\partial D_t$.
+\end{proof}
+
+\begin{lemma}[central moves]\label{lem:moves}
+(a) The partition function with sheets on $\Pi_q$, $q\in Q$, depends only on $|Q|\bmod2$.
+(b) $Z^\pm_t$ and $m^\pm_t$ do not depend on the choice of $q_t\subset D_t$.
+(c) If $\Sigma^\flat$ is obtained from $\Sigma$ by multiplying the $3$-links over one edge of $\partial D_t$ by $-1$, then $Z^s_t(\Sigma^\flat)=Z^{-s}_t(\Sigma)$ and $m^s_t(\Sigma^\flat)=m^{-s}_t(\Sigma)$.
+\end{lemma}
+\begin{proof}
+Multiplying the $3$-links at $(x_1,x_2,a,b+1)$, for all $(x_1,x_2)$, by the central element $-1$ preserves Haar measure and changes the sign of $\tr U_p$ exactly on $\Pi_{(a,b)}\cup\Pi_{(a,b+1)}$.
+Indeed, a $(3,4)$-plaquette contains one such link if and only if it lies in these sheets, a $(\mu,3)$-plaquette with $\mu\le2$ contains two or none, and other plaquettes contain none.
+The same holds in direction $4$, and the dual lattice is connected; this gives (a).
+In (b) the flipped links are interior links of $t$.
+In (c) the flipped links lie, among the plaquettes of $P_t$, only in the sheet over the unit square of $D_t$ adjacent to the edge (the $(\mu,3)$-plaquettes over the edge are frame plaquettes and contain two flipped links); this adds one sheet, which (b) moves onto $q_t$, where two sheets cancel.
+The substitutions are bijections of the interior configurations, so the minima transform in the same way.
+\end{proof}
+
+\begin{proposition}[column representation]\label{prop:column}
+Choose $q_t$ reflection-covariantly (mirrored in adjacent blocks). Let $\tilde\mu(dU,s)\propto e^{-\beta S^{z^s}(U)}dU$ on configurations and sign vectors $s\in\{\pm\}^T$, where $z^s$ carries a sheet over $q_t$ for each $t$ with $s_t=-$, and let $\nu$ be its marginal on skeleton links. Then
+\[ \theta=\Big\langle\prod_{t\in T}s_t\Big\rangle_{\tilde\mu}=\E_\nu\Big[\prod_{t\in T}\theta_t(\Sigma)\Big]. \]
+\end{proposition}
+\begin{proof}
+By Lemma~\ref{lem:moves}(a), $Z[s]=Z(0)$ if $\prod_ts_t=1$ and $Z(1)$ otherwise, and half of the $2^{|T|}$ sign vectors have each parity.
+Hence $\sum_s(\prod_t s_t)Z[s]=2^{|T|-1}(Z(0)-Z(1))$ and $\sum_sZ[s]=2^{|T|-1}(Z(0)+Z(1))$.
+By Lemma~\ref{lem:partition}, $Z[s]=\int d\Sigma\,e^{-\beta A_{\rm sk}(\Sigma)}\prod_tZ_t^{s_t}(\Sigma)$.
+The sums over $s$ factorise block by block: $\sum_s\prod_ts_tZ^{s_t}_t=\prod_t(Z^+_t-Z^-_t)$ and $\sum_s\prod_tZ^{s_t}_t=\prod_t(Z^+_t+Z^-_t)$ (Lean: \code{ColumnChessboard.signed\_sum} and \code{unsigned\_sum}). Divide.
+\end{proof}
+
+\subsection{Reflection positivity and frames of large action}
+
+\begin{proposition}\label{prop:rp}
+$\tilde\mu$ is reflection positive for the site reflections $x_3\mapsto2k\ell-x_3$ and $x_4\mapsto2k\ell-x_4$. Consequently, by the chessboard estimate [FILS, Sh, Bi], for bounded functions $f_t$ of the variables of the closed block $D_0$, $|\langle\prod_tf_t\circ\vartheta_t\rangle_{\tilde\mu}|\le\prod_t\langle\prod_sf_t\circ\vartheta_s\rangle_{\tilde\mu}^{1/|T|}$, where $\vartheta_t$ is the composition of block reflections mapping $D_t$ to $D_0$.
+\end{proposition}
+\begin{proof}[Proof of reflection positivity]
+The reflection maps links of one closed half to the other (inverting links normal to the hyperplane), the sheet signs of mirrored blocks to each other, twist plaquettes to twist plaquettes, and sheets to sheets by the covariant choice of $q_t$.
+Moreover $\tr U_p^{-1}=\tr U_p$ in SU(2), and Haar measure is inversion invariant.
+Every plaquette lies in a fixed hyperplane or in one closed half (sheets are $(3,4)$-plaquettes, never inside a hyperplane $x_3$ or $x_4=$ const).
+So the weight factorises as $A(\phi)F(\phi,\psi_+,s_+)F(\phi,\Theta\psi_-,\Theta s_-)$ with $\phi$ the variables in the fixed hyperplanes and $A,F\ge0$, and $\langle G\,\Theta\bar G\rangle=\tilde Z^{-1}\int d\phi\,A(\phi)\,|\sum_{s_+}\int d\psi_+FG|^2\ge0$.
+The chessboard estimate is the general consequence of reflection positivity for a family of reflections through all block-boundary hyperplanes [FILS, Sh, Bi].
+It needs $K=M/\ell$ even. We quote it and do not re-derive it.
+\end{proof}
+
+\begin{remark}
+Two ingredients of this proposition have machine-checked counterparts that we do not use here.
+The first counterpart is reflection positivity for the site reflection $x_4\mapsto-x_4$ (fixed planes $x_4=0$ and $x_4=M/2$, $M$ even) of the product Haar measure, together with the splitting of the twisted Wilson weight with sheet signs into two reflected halves (Lean: \code{HalfSplit.half\_pairing\_nonneg}, \code{HalfSplit.half\_split}).
+The second is the abstract one-dimensional chessboard estimate, which derives $|V(F)|^n\le\prod_tV(\text{constant family }F(t))$ from the reflection Cauchy--Schwarz inequality for every fold (Lean: \code{FoldChess.chess\_one}).
+A chessboard estimate for the untwisted Wilson measure on $(\mathbb{Z}/2m)^4$ with unit blocks (\code{FoldWilson}) is also in the bundle.
+None of these covers $\tilde\mu$: the combination for $\tilde\mu$, with the sign variables and the block reflections in both directions, is not in Lean.
+The estimate of Proposition~\ref{prop:rp} remains quoted.
+\end{remark}
+
+\begin{lemma}[reduction to frames of large action]\label{lem:goodbad}
+Let $G_0$ be an event on the frame of block $0$, $G_t=\vartheta_t^{-1}G_0$, and suppose $|\theta_t|\le1-\eta$ on $G_t$ with $\eta\in[0,1]$. With $p=\nu(\bigcap_tG^c_t)^{1/|T|}$, $\theta\le(1-\eta(1-p))^{|T|}$.
+\end{lemma}
+\begin{proof}
+Pointwise, $|\theta_t|\le(1-\eta)+\eta\mathbf{1}_{G_t^c}$.
+Expand the product over subsets $S\subset T$ (Lean: \code{ColumnChessboard.prod\_expand}).
+By Proposition~\ref{prop:rp} applied to $f_t=\mathbf{1}_{G^c_0}$ for $t\in S$ and $f_t=1$ otherwise, $\nu(\bigcap_{t\in S}G_t^c)\le p^{|S|}$.
+Now sum the binomial series (Lean: \code{ColumnChessboard.\allowbreak{}binomial\_bound}).
+\end{proof}
+
+\begin{lemma}[frames of large action are rare]\label{lem:bad}
+Let $\varepsilon_1=L(\beta)/\beta$ and $G_t=\{A_t\le\varepsilon_1\}$. Then $p\le\frac12$ for all $\beta\ge1$.
+\end{lemma}
+\begin{proof}
+A skeleton plaquette belongs to at most four frames (the $(1,2)$-plaquettes over a grid corner), so on $\bigcap_tG_t^c$ we have $A_{\rm sk}\ge\frac14\sum_tA_t>\varepsilon_1|T|/4$.
+By Markov's inequality, $\nu(\bigcap_tG_t^c)\le e^{-\beta\varepsilon_1|T|/4}\E_\nu e^{\beta A_{\rm sk}}$.
+Here $\E_\nu e^{\beta A_{\rm sk}}=\Xi^{-1}\int d\Sigma\prod_t(Z^+_t+Z^-_t)\le2^{|T|}/\Xi\le2/Z(0)$, because $Z^\pm_t\le1$ and $\Xi=2^{|T|-1}(Z(0)+Z(1))$.
+Each $S_p$ is $1$-Lipschitz in each of its links in operator norm ($\frac12|\tr(A-B)|\le\|A-B\|$ and $\|\prod U_i-\prod V_i\|\le\sum\|U_i-V_i\|$ for unitaries).
+On the set where every link is within $r=1/\beta$ of $U^0$ the action is at most $4\cdot6N^2M^2\,r$.
+The class angle $\psi\in[0,\pi]$ of $W^{-1}U$ has density $\frac2\pi\sin^2\psi$, and $\|U-W\|=2\sin(\psi/2)\le\psi$.
+A ball of radius $r\le\pi/2$ therefore has Haar measure at least $\frac2\pi\int_0^r(2\psi/\pi)^2d\psi=c_0r^3$.
+Hence $Z(0)\ge(c_0\beta^{-3})^{4N^2M^2}e^{-24N^2M^2}\ge\exp(-N^2M^2(12\ln\beta+34))$, using $4\ln(1/c_0)<10$.
+With $M^2=\ell^2|T|$, $p\le2^{1/|T|}\exp(-L(\beta)/4+N^2\ell^2(12\ln\beta+34))=2^{1/|T|}\cdot\frac14\le\frac12$.
+\end{proof}
+
+\subsection{Flat frames and rigidity}
+
+\begin{lemma}[flat frames]\label{lem:flat}
+$A_t(\Sigma)=0$ if and only if $\Sigma$ lies in one of two distinct gauge orbits, that of $\Sigma^0$ or that of $\Sigma^\flat$ ($\Sigma^0$ modified as in Lemma~\ref{lem:moves}(c)). They are distinguished by the sign $\pm1$ of the holonomy around $\partial D_t$.
+\end{lemma}
+\begin{proof}
+The condition $A_t=0$ means $z_pU_p=1$ for every frame plaquette (a unit quaternion with real part $1$ is $1$).
+On each slice $T^2_N\times\{c\}$ the frame is therefore a configuration on $T^2_N$ whose plaquette products are $-1$ at the twist plaquette and $1$ elsewhere. Every such configuration is a gauge transform of the twist eater (Lean: \code{TwistBlocks.rigidT\_all}, every $N\ge1$), and the gauge transformations of $T^2_N$ that fix the twist eater are the constants $\pm1$ (Lean: \code{TwistBlocks.stab\_vacT}).
+Gauge every slice to the twist eater. Flatness of the mixed plaquettes over a cycle edge $\tau$ gives $V(x+\hat\mu)=(U^0_{x,\mu})^{-1}V(x)U^0_{x,\mu}$ for the links $V(x)$ along $\tau$.
+Going around the two cycles of $T^2_N$ shows that $V(0)$ commutes with $i\sigma_1$ and $i\sigma_2$, hence $V\equiv\epsilon_\tau\in\{\pm1\}$.
+A gauge transformation $-1$ on one slice flips $\epsilon$ on its two cycle edges, so only $\prod_\tau\epsilon_\tau$, which is $\frac12\tr$ of the holonomy around $\partial D_t$, is invariant.
+\end{proof}
+
+\begin{lemma}[quadratic rigidity of frames]\label{lem:rigid}
+There is $c_R=c_R(N,\ell)>0$ such that $A_t(\Sigma)\ge c_R\,d(\Sigma)^2$ for every frame $\Sigma$, where $d$ is the max-link operator-norm distance to the union of the two flat orbits.
+\end{lemma}
+\begin{proof}
+Write $\Sigma_e=e^{a_e}\Sigma^f_e$ near a flat frame $\Sigma^f$, $a\in\mathfrak{su}(2)^{\Sigma_t}$.
+Then $z_pU_p=\exp((d^1_fa)_p+O(|a|^2))$ with $d^1_f$ the coboundary of the cellular complex of $T^2_N\times C_{4\ell}$ with coefficients in the adjoint local system of $\Sigma^f$, and $1-\frac12\tr e^X=\frac12|X|^2+O(|X|^4)$.
+Hence $A_t=\frac12|d^1_fa|^2+O(|a|^3)$.
+The tangent space of the orbit is $\operatorname{im}d^0_f$, so the Hessian is non-degenerate on the normal space if and only if $H^1=0$.
+In the gauge of Lemma~\ref{lem:flat} the cycle links are $\pm1$, which act trivially in the adjoint, so the local system is pulled back from $V=\mathrm{ad}(\text{twist eater})$ on $T^2_N$, and the cellular complex is the tensor product of the twisted complex of $T^2_N$ and the untwisted complex of $C_{4\ell}$ (Künneth over $\mathbb{R}$).
+We have $H^0(T^2_N;V)=0$, because no vector of $\mathfrak{su}(2)$ is fixed by both $\mathrm{Ad}(i\sigma_1)$ and $\mathrm{Ad}(i\sigma_2)$.
+Next, $H^2(T^2_N;V)\cong H_0(T^2_N;V)$ is the space of coinvariants, which is $0$ because the images of $\mathrm{Ad}(i\sigma_1)-1$ and $\mathrm{Ad}(i\sigma_2)-1$ span $\mathfrak{su}(2)$.
+The Euler characteristic gives $\dim H^0-\dim H^1+\dim H^2=3\chi(T^2)=0$, so $H^1(T^2_N;V)=0$, and by Künneth $H^1(T^2_N\times C_{4\ell};V)=0$.
+Near the compact zero set, the Taylor expansion with remainder uniform on the zero set gives $A_t\ge\frac14\lambda\,\mathrm{dist}^2$, with $\lambda>0$ the minimum over the zero set of the smallest normal eigenvalue; this is the Morse--Bott situation [Bott].
+Away from a neighbourhood, $A_t$ is bounded below by compactness, while $d\le2$.
+Riemannian and max-link distances are comparable on the compact product.
+\end{proof}
+
+\begin{remark}
+The radius of the neighbourhood and the bound away from it are not explicit; only their existence is used. Lemma~\ref{lem:rigid} is not in Lean; Theorem~\ref{thm:D} below does not need it.
+\end{remark}
+
+\subsection{Proof of Theorem~\ref{thm:A}}
+
+\begin{lemma}[ball bound]\label{lem:ball}
+For every frame and $\beta\ge1$, $1-|\theta_t|\ge\min(Z^+_t,Z^-_t)\ge c_0^{n_B}\beta^{-3n_B}e^{-6n_B}e^{-\beta\max_sm^s_t(\Sigma)}$.
+\end{lemma}
+\begin{proof}
+We have $1-|\theta_t|=2\min(Z^\pm_t)/(Z^+_t+Z^-_t)$ and $Z^\pm_t\le1$.
+Around a minimiser, on the set where each interior link is within $1/\beta$ of it, $S^s_t\le m^s_t+6n_B/\beta$, because each interior link lies in six plaquettes, all in $P_t$.
+This set has Haar measure at least $(c_0\beta^{-3})^{n_B}$.
+\end{proof}
+
+\begin{lemma}[frames of small action]\label{lem:good}
+If $A_t(\Sigma)\le\varepsilon$ then $\max_sm^s_t(\Sigma)\le S_*(N,\ell)+L_\partial\sqrt{\varepsilon/c_R}$.
+\end{lemma}
+\begin{proof}
+The minimum $m^s_t$ is invariant under gauge transformations of the frame.
+To see this, extend the transformation by $1$ to interior sites; by Lemma~\ref{lem:partition} every plaquette of $P_t$ has its links in $\mathrm{int}(t)\cup\Sigma_t$.
+By Lemma~\ref{lem:rigid} the frame is, after a gauge transformation, within $d=\sqrt{\varepsilon/c_R}$ of $\Sigma^0$ or $\Sigma^\flat$ in every link.
+The minimum $m^s_t$ is $L_\partial$-Lipschitz in the frame: $L_\partial$ counts the incidences between plaquettes of $P_t$ and frame links, namely $8N^2(\ell-1)$ mixed plaquettes $(\mu,\tau')$ with $\tau'$ an inward edge at a non-corner boundary vertex, each with one frame link, and $4\ell N^2$ incidences of $(3,4)$-plaquettes with boundary edges.
+Finally $m^+_t(\Sigma^0)=0$, $m^-_t(\Sigma^0)=S_*$, and $m^\pm_t(\Sigma^\flat)=m^\mp_t(\Sigma^0)$ by Lemma~\ref{lem:moves}(c).
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:A}]
+Take $G_t=\{A_t\le\varepsilon_1\}$, which is reflection covariant because the frame action is invariant under block reflections. By Lemmas~\ref{lem:ball} and~\ref{lem:good}, $|\theta_t|\le1-\eta$ on $G_t$ with
+\[ \eta=c_0^{n_B}\beta^{-3n_B}e^{-6n_B}\exp\big(-\beta S_*-L_\partial\sqrt{\beta L(\beta)/c_R}\big)\in[0,1]. \]
+By Lemma~\ref{lem:bad}, $p\le\frac12$.
+Lemma~\ref{lem:goodbad} then gives $\theta\le(1-\eta/2)^{M^2/\ell^2}\le\exp(-\eta M^2/(2\ell^2))$ (Lean: \code{ColumnChessboard.exp\_bound}). If an explicit configuration with vacuum frame and column action $\bar S$ replaces the minimiser in Lemma~\ref{lem:good}, the same proof gives the bound with $\bar S$.
+\end{proof}
+
+\section{Theorem B and Corollary C: the rate at fixed $M$}\label{sec:B}
+
+\begin{theorem}[explicit reverse bound at fixed $M$]\label{thm:B}
+For all $N,M\ge2$ and $\beta\ge1$ let $x=2\exp\big(-\beta S_{\min}(N,M)+N^2M^2(12\ln\beta+34)\big)$. If $x\le\frac12$ then $0<\theta$ and $-\ln\theta(N,M,\beta)\le2x$.
+\end{theorem}
+\begin{proof}
+We have $\theta=1-2Z(1)/(Z(0)+Z(1))\ge1-2Z(1)/Z(0)$.
+Every configuration of sector $(1,1)$ has action at least $S_{\min}(N,M)$, so $Z(1)\le e^{-\beta S_{\min}(N,M)}$ (normalised Haar measure).
+As in the proof of Lemma~\ref{lem:bad}, $Z(0)\ge\exp(-N^2M^2(12\ln\beta+34))$.
+So $\theta\ge1-x\ge\frac12$ and $-\ln\theta\le-\ln(1-x)\le x/(1-x)\le2x$.
+\end{proof}
+
+\begin{corollary}[the rate at fixed $M$ is the minimal action of sector $(1,1)$]\label{cor:C}
+For all $N,M\ge1$, $0<\theta(N,M,\beta)<1$ for all sufficiently large $\beta$, and
+\[ \lim_{\beta\to\infty}\frac{-\ln(-\ln\theta(N,M,\beta))}{\beta}=S_{\min}(N,M). \]
+\end{corollary}
+\begin{proof}
+$\Delta F/\beta\to S_{\min}(N,M)$ as $\beta\to\infty$ (Lean: \code{ThetaLimit.tendsto\_logratio\_div}, all $N,M\ge1$; the constant $e^{\beta|P|}$ of \S\ref{sec:dict} cancels in $\Delta F$), and $S_{\min}(N,M)>0$ (Lean: \code{TwistFlat.minDefect11\_pos}). Hence $\Delta F\to+\infty$ and $\theta=\tanh(\Delta F/2)\in(0,1)$ for large $\beta$ (Lean also gives $\theta\to1$, \code{ThetaLimit.tendsto\_theta\_one}).
+With $u=e^{-\Delta F}\in(0,1)$, $-\ln\theta=\ln\frac{1+u}{1-u}$ and $2u\le\ln\frac{1+u}{1-u}\le\frac{2u}{1-u}$, so $\ln(-\ln\theta)=-\Delta F+\ln2+r$ with $0\le r\le-\ln(1-u)\to0$. Divide by $-\beta$. (The limit of $\Delta F/\beta$ is in Lean; this last step is on paper.)
+\end{proof}
+
+The proof of the Lean limit bounds $Z(0)$ and $Z(1)$ above by the minimal actions and below by the Haar volume of a neighbourhood of a minimiser of each sector.
+At fixed $M$ it needs neither Theorem~\ref{thm:A} nor the chessboard estimate.
+Theorem~\ref{thm:B} is an explicit form of the lower bound on the rate (an upper bound on $-\ln\theta$).
+The fixed-$M$ rate is consistent with Theorem~\ref{thm:A}: $S_{\min}(N,k\ell)\le S_*(N,\ell)$ for all $k\ge1$.
+The reason is that extending a column configuration with vacuum frame by the vacuum gives a configuration of sector $(1,1)$ on $T^2_N\times T^2_{k\ell}$ with the same action (Lemma~\ref{lem:partition}).
+For $k=1$ the opposite frame sides are identified consistently because the vacuum frame is translation invariant.
+The fixed-$M$ bound of Theorem~\ref{thm:B} loses $e^{O(M^2\ln\beta)}$ through the lower bound on $Z(0)$.
+The $\beta$-range in the Lean limit also depends on $M$, and it is not explicit.
+Hence neither statement says anything uniformly in $M$.
+The $M$-uniform reverse bound is open (\S\ref{sec:notclaimed}).
+
+\section{Theorem D: the area law with rate $S_N$, machine-checked form}\label{sec:D}
+
+\begin{theorem}[thick-vortex area law]\label{thm:D}
+Let $N\ge1$. For every $\varepsilon>0$ there is $\beta_0$ such that for every $\beta\ge\beta_0$ there is $M_0$ such that for every $M\ge M_0$
+\[ |\theta(N,M,\beta)|\le\exp\big(-M^2e^{-\beta(S_N+\varepsilon)}\big). \]
+Moreover there is $\delta_N>0$ with $S_*(N,\ell)\ge\delta_N$ for every $\ell\ge2$, so $S_N>0$; and
+\[ S_2\le S_*(2,8)\le6.67401,\qquad S_3\le S_*(3,8)\le9.09321,\qquad S_4\le S_*(4,4)\le12.02057. \]
+\end{theorem}
+Lean: \code{TwistBlocks.thick\_vortex\_floor} (the bound on $|\theta|$, in the form $|\theta(N,M{+}1,\beta)|$, eventually in $\beta$ and then eventually in $M$), \code{VortexPos.Svortex\_ge\_unif} and \code{VortexPos.SN\_pos}, \code{VortexCert.Svortex\_two\_eight\_le}, \code{Svortex\_three\_eight\_le}, \code{Svortex\_four\_four\_le} and \code{VortexCert.SN\_two\_lt}, \code{SN\_three\_lt}, \code{SN\_four\_lt} ($S_N<2N^2$). With the three upper bounds, \code{TwistBlocks.thick\_vortex\_floor\_two}, \code{\_three} and \code{\_four} state the bound on $|\theta|$ with $S_N+\varepsilon$ replaced by $6.675$, $9.094$ and $12.021$, against the thin-sheet rate $2N^2=8,18,32$ (\S\ref{sec:numbers}).
+The three upper bounds are computer-assisted certificates, obtained as follows.
+A configuration found by cooling is rounded to rational unit quaternions $q=(s^2-|t|^2,2st)/(s^2+|t|^2)$ with integer $t\in\mathbb{Z}^3$ and $s=2^{16}$ (Cayley parametrisation; the norm is exactly $1$).
+The column action is bounded above by an integer sum with every plaquette term rounded upward to the denominator $2^{32}$, and the integer inequality is evaluated by the Lean kernel (\code{decide +kernel}).
+A general lemma (\code{VortexCert.Svortex\_le\_of\_cert}) turns this inequality into the bound on $S_*$.
+
+\paragraph{How the Lean proof goes.}
+(1) The proof freezes all frames and cuts the plane into $k^2$ blocks of side $m$, where $mk\le M$; with $k=\lfloor M/m\rfloor$ the last block has width in $[m,2m)$.
+This gives $|\theta|\le\tanh(K_{\rm eff})^{k^2}$, where $K_{\rm eff}$ is half the supremum, over blocks and over all frames, of $|\ln(Z^F_b(+)/Z^F_b(-))|$ (\code{TwistBlocks.block\_bound\_abs}).
+The supremum over all frames replaces the chessboard estimate.
+(2) A Laplace bound gives $K_{\rm eff}\le\frac12(\beta(\kappa+2\delta)+D(\delta))$.
+Here $\kappa$ is the supremum over frames of the difference of the two minimal block actions, and $D(\delta)$ is independent of $\beta$ and $M$.
+(3) $\kappa\le S_N+\varepsilon$ for large $m$, by the following argument.
+A block of large side contains a window of side $m_0$ of small action (pigeonhole).
+A configuration of zero action on such a window is a gauge transform of the vacuum; the tree gauge in the plane reduces this to \code{rigidT\_all} on $T^2_N$.
+Compactness passes from zero action to small action, and the flux is then moved through the window at a cost of at most $S_*(N,m_0)+\varepsilon$.
+The non-explicit thresholds come from compactness in (3) and from $D(\delta)$.
+
+\paragraph{Comparison with Theorem~\ref{thm:A}.}
+At a fixed $\ell$, the rate $S_N$ is at most $S_*(N,\ell)$, the bound is on $|\theta|$, $M$ is not restricted to $2\ell\mathbb{N}$, and no chessboard estimate and no quadratic rigidity (Lemma~\ref{lem:rigid}) are used. What is weaker is the range: $\beta\ge\beta_0(\varepsilon)$ and $M\ge M_0(\beta,\varepsilon)$, neither explicit.
+Theorem~\ref{thm:A}, by contrast, holds for every $\beta\ge1$ and every $M\in2\ell\mathbb{N}$, with an explicit prefactor and one non-explicit constant.
+Theorem~\ref{thm:A} also reaches the rate $S_N+\varepsilon$, by choosing $\ell$ with $S_*(N,\ell)<S_N+\varepsilon/2$, but only along $M\in2\ell\mathbb{N}$.
+The thick-vortex bound holds only for sufficiently large $M$; the bound that holds for every $M\ge1$ is the thin-vortex bound of Proposition~\ref{prop:trivial}.
+
+\section{The thin-vortex bound and upper bounds for $S_*$}\label{sec:numbers}
+
+\begin{proposition}[thin-vortex bound]\label{prop:trivial}
+For all $N,M\ge1$ and all real $\beta$, $|\theta(N,M,\beta)|\le\tanh(N^2|\beta|)^{M^2}$. Hence for $\beta>0$, with $\sigma_0=-\ln\tanh(N^2\beta)>0$,
+\[ |\theta|\le e^{-\sigma_0M^2},\qquad \sigma_0\ge2e^{-2\beta N^2}. \]
+\end{proposition}
+In Lean these are \code{twisted\_vortex\_bound\_abs} and \code{thin\_vortex\_floor} (namespace \code{TwistedWilson}; the latter for $\beta\ne0$); both hold for either background $n_{12}\in\{0,1\}$.
+The inequality $\sigma_0\ge2e^{-2\beta N^2}$ is not in Lean; it is $-\ln\tanh y=\ln\frac{1+u}{1-u}\ge2u$ with $u=e^{-2y}$.
+The proof in Lean compares the twisted ratio with that of a two-dimensional $\mathbb{Z}_2$ gauge theory on $(\mathbb{Z}/M)^2$ at coupling $N^2|\beta|$: averaging the SU(2) weight over the central signs of the links and dominating the plaquette couplings in absolute value gives $Z(0)\,Z_{\mathbb{Z}_2}^{\rm tw}\le Z(1)\,Z_{\mathbb{Z}_2}$, and in two dimensions $Z^{\rm tw}_{\mathbb{Z}_2}/Z_{\mathbb{Z}_2}=(1-t^{M^2})/(1+t^{M^2})$ with $t=\tanh(N^2|\beta|)$; the same with the two sectors exchanged gives the absolute value.
+For even $M$, Proposition~\ref{prop:sign} gives $\theta\ge0$, and the bound reads $-\ln\theta\ge2e^{-2\beta N^2}M^2$. (Proposition~\ref{prop:column} alone, without the chessboard estimate, gives the weaker exponent $M^2/4$ for $M\in4\mathbb{N}$; version~1 stated this exponent for even $M$.)
+
+Theorem~\ref{thm:A} improves the exponent by $2N^2-S_*$ per unit of $\beta$, but its prefactor is $\beta^{-3n_B}e^{-6n_B}e^{-O(\sqrt{\beta\ln\beta})}$ with a non-explicit constant.
+It therefore beats Proposition~\ref{prop:trivial} only for $\beta$ beyond a finite, large and non-explicit value.
+The same holds for Theorem~\ref{thm:D} through its thresholds.
+
+\paragraph{Elementary properties of $S_*$.}
+$S_*(N,\ell)$ is attained (compactness) and is at most $2N^2$ (vacuum interior and one thin sheet).
+It is non-increasing in $\ell$: place a minimiser in a corner of a larger column and the vacuum elsewhere; every additional plaquette then has all its links at vacuum values.
+Finally, $S_*(N,\ell)\ge S_{\min}(N,k\ell)$ for $k\ge1$.
+Hence $\lim_\ell S_*(N,\ell)$ exists, equals $S_N$, is at least $\limsup_kS_{\min}(N,k\ell)$ for each $\ell$, and is positive (Theorem~\ref{thm:D}).
+
+\paragraph{Computed upper bounds.}
+Column minimisers were searched by cooling from a thin sheet plus noise.
+Saved configurations were normalised exactly, the frame was checked to equal the vacuum exactly, and the column action was re-evaluated in 40-digit arithmetic.
+Each value is the action of an explicit configuration and therefore an upper bound on $S_*$.
+By the last sentence of Theorem~\ref{thm:A} it can be inserted there.
+These values are computed, were not recomputed for this version, and are not machine-checked; the machine-checked bounds are those of Theorem~\ref{thm:D}.
+\begin{center}
+\footnotesize\begin{tabular}{llll}\toprule
+$(N,\ell)$ of col.~2 & computed bound on $S_*(N,\ell)$ & $/\pi^2$ & kernel-checked (Thm.~\ref{thm:D})\\\midrule
+$(2,12)$ & $6.67348665542$ & $\le0.6762$ & $S_*(2,8)\le6.67401$\\
+$(3,12)$ & $9.07284242009$ & $\le0.9193$ & $S_*(3,8)\le9.09321$\\
+$(4,8)$ & $9.57961427901$ (cooling not converged) & $\le0.9707$ & $S_*(4,4)\le12.02057$\\\bottomrule
+\end{tabular}
+\end{center}
+For $N=4$ the kernel-checked bound $12.02057\approx1.218\pi^2$ lies above the continuum value $\pi^2$; only the computed value $9.580\approx0.971\pi^2$ lies below it, and this value comes from a cooling search that did not converge and is not machine-checked.
+For $N=2,3$ the kernel-checked bounds are $\le0.677\pi^2$ and $\le0.922\pi^2$.
+Against the thin-sheet rate $2N^2=8,18,32$, the computed values give exponent gains of about $1.33$, $8.93$ and at least $22.4$.
+Cooling on the periodic torus gives configurations of sector $(1,1)$ with action
+\[ 6.740117,\ 6.677345,\ 6.673724,\ 6.673486,\ 6.673485\quad(N=2,\ M=4,6,8,12,16) \]
+and $9.072494$ ($N=3$, $M=16$).
+These values are upper bounds, $S_{\min}(2,M)\le\dots$ and $S_{\min}(3,16)\le9.072494$, not lower bounds.
+By Corollary~\ref{cor:C} the fixed-$M$ rate for $N=2$, $M=16$ is $S_{\min}(2,16)$.
+This rate is at most $S_*(2,8)$ (on paper, by the extension argument of \S\ref{sec:B}), and $S_*(2,8)\le6.67401$ (kernel-checked).
+The same rate is also at most $6.673485$ (cooled configuration, not machine-checked).
+It is a numerical observation that $S_*(N,\ell)$ approaches the periodic-torus values as $\ell$ grows, with an excess decaying roughly like $e^{-m_N\ell}/\ell$, where $m_N=2\,\mathrm{arsinh}\sin(\pi/2N)$.
+
+\paragraph{A lower bound on $S_{\min}$.}
+For all $N,M\ge1$, $S_{\min}(N,M)\ge2N^2M^2/(N^2+M^2)^2$, so $S_{\min}(N,N)\ge\frac12$ for every $N$ (Lean: \code{TwistFloor.defect11\_ge\_two}, \code{TwistFloor.defect11\_sym\_half}).
+This lower bound is uniform in $N$ but about one twentieth of the continuum value $\pi^2$, and it tends to $0$ as $M/N\to\infty$, so it says nothing in the regime $M\gg N$ of this paper.
+
+\section{The sign of $\theta$ and Polyakov loop pairs}\label{sec:sign}
+
+\begin{proposition}[sign of the bias]\label{prop:sign}
+If $M$ is even, then $Z(1)\le Z(0)$, i.e.\ $\theta(N,M,\beta)\ge0$, for all $N\ge1$ and every real $\beta$.
+\end{proposition}
+Lean: \code{TwistBlocks.theta\_nonneg} (with \code{HalfSplit.Z1\_le\_Z0}). The proof applies reflection positivity for $x_4\mapsto-x_4$ (fixed planes $x_4=0$ and $x_4=M/2$) to $g=a_1-a_T$, where $a_\eta$ is the half weight with sheet signs $\eta$ and $T$ flips the sheet at $(x_3,x_4)=(0,0)$.
+Expanding $0\le\int g(\Theta\omega)g(\omega)$ gives $0\le Z(0)-2Z(1)+Z(0)$, because the partition function with one sheet (at either position) is $Z(1)$ and with two sheets is $Z(0)$ (the Lean form of Lemma~\ref{lem:moves}(a)).
+Consequently the reading of Theorem~\ref{thm:A} as a lower bound on $-\ln\theta$ needs no assumption on the sign of $\theta$, since $M\in2\ell\mathbb{N}$ is even.
+The same holds for Proposition~\ref{prop:trivial} at even $M$.
+For odd $M$ the sign is not established here, and Theorem~\ref{thm:D} and Proposition~\ref{prop:trivial} are stated for $|\theta|$.
+
+\begin{proposition}[Polyakov loop pairs]\label{prop:poly}
+For $b\in T^2_N$ and $t\in\mathbb{Z}/M$ let $P_b(t)=\frac12\tr\prod_{k=0}^{M-1}U_{(b,k,t),3}$ be the Polyakov loop in direction $3$ at transverse position $b$ and $x_4=t$, and $\langle\cdot\rangle_0$ the expectation in sector $(n_{12},n_{34})=(1,0)$. If $M\equiv0\pmod4$, then for every real $\beta$, all $b,b'$ and $0\le T\le M$,
+\[ |\langle P_b(0)P_{b'}(T)\rangle_0|\le2\tanh(N^2|\beta|)^{M\min(T,M-T)}. \]
+\end{proposition}
+Lean: \code{PolyakovT.polyakov\_pair\_all}. This is a bound inside the tube of cross-section $T^2_N$, with the thin-sheet rate $-\ln\tanh(N^2\beta)\approx2e^{-2N^2\beta}$.
+It is not uniform in $N$ and is very weak at large $N$ or $\beta$: at $\beta=1$ the right-hand side is below $\frac14$ only when $M\min(T,M-T)>3099$ for $N=2$ and $>6.8\cdot10^7$ for $N=3$ (computed). It is not a statement about a string tension at large $N$.
+
+\section{What is not claimed}\label{sec:notclaimed}
+
+\begin{enumerate}[leftmargin=*]
+\item \emph{(G1) Reverse bound uniform in $M$.} A dilute-gas lower bound
+\[ \theta\ge\exp\big(-C\beta^{a'}e^{-\beta(S_*-o(1))}M^2\big) \]
+is open. One route is to rewrite $\theta$ exactly over connected clusters of frames of large action and to show that each cluster factor is positive with $1-2q_R\ge e^{-C|R|}$, a property we call (Pos). Neither the rewriting nor (Pos) is claimed here.
+\item \emph{(G2) Identification of the rate.} At fixed $M$ the rate is $S_{\min}(N,M)$ (Corollary~\ref{cor:C}). The $M$-uniform bounds have rate $S_*(N,\ell)$ along $M\in2\ell\mathbb{N}$ (Theorem~\ref{thm:A}) and $S_N=\lim_\ell S_*(N,\ell)$ for all large $M$ (Theorem~\ref{thm:D}). It is not proved that $\lim_MS_{\min}(N,M)$ exists and equals $S_N$; only $S_N\ge\limsup_k S_{\min}(N,k\ell)$ is. Without (G2), the statement ``the $M$-uniform rate is set by fractional instantons'' holds only on the upper side: the rate is at most the confined-column action $S_N$.
+\item \emph{(G3) Large $N$.} The cooled values of $S_{\min}(N,M)$ at the largest $M$ computed ($M=16$), divided by $\pi^2$, are about $0.676$ and $0.919$ for $N=2,3$. For $N=4$ only the column value $0.971\pi^2$ from a search that did not converge is available. That these approach the continuum value $1$ is numerical only. Nothing is uniform in $N$, except the weak bound $S_{\min}(N,N)\ge\frac12$ of \S\ref{sec:numbers}, which does not reach the regime $M\gg N$. The passage from $N$ small compared with the correlation length to $N$ large is not addressed.
+\item \emph{(G4) Constants.} The constant $c_R$ and hence the range of $\beta$ in which Theorem~\ref{thm:A} improves Proposition~\ref{prop:trivial} are not explicit. The prefactor $\beta^{-3n_B}$ and the $\sqrt{\beta\ln\beta}$ term come from crude ball estimates and worst-case frames. The thresholds of Theorem~\ref{thm:D} and the constant $\delta_N$ come from compactness and are not explicit.
+\item \emph{(G5) From an area law to a gap.} An area law for the twist-summed bias does not by itself give a mass gap: on a product of a confining theory with a massless free field, Wilson loops of the confining factor obey an area law while the spectrum has no gap. Any passage from area law to gap has to restrict the observables, and we do not attempt it.
+\end{enumerate}
+Moreover, no continuum limit is taken.
+The semiclassical identification of $S_*$ with a fractional instanton is interpretation, not a theorem here.
+The chessboard estimate is quoted in the proof of Theorem~\ref{thm:A}.
+The cooled values and the 40-digit evaluations are not machine-checked; the three certificates of Theorem~\ref{thm:D} are.
+
+\section{What is machine-checked}\label{sec:lean}
+
+{\sloppy The declarations below are in one Lean~4 package with Mathlib (Lean v4.33.1, Mathlib v4.33.1), kept as the bundle \code{principia-ym-three-volumes-2026-11-13}, an archive in the directory \code{lean/\allowbreak{}ym-three-volumes-2026-11-13} of the repository \url{https://github.com/yoshikazuhosomura-sys/lattice-yang-mills}, with its checksum file (suffix \code{.sha256}; sha256 \texttt{f8a44451\allowbreak{}7b2f013a\allowbreak{}287ec200\allowbreak{}75977cb0\allowbreak{}afa71c01\allowbreak{}9de2d3c3\allowbreak{}da577118\allowbreak{}c05aea62}) and its axiom log \code{axioms-\allowbreak{}ym-three-volumes-\allowbreak{}2026-11-13.txt} in the same directory. For each declaration of Table~\ref{tab:lean} the axiom log reports \code{[propext, Classical.choice, Quot.sound]}. The bundle contains no \code{sorry}, \code{admit}, \code{native\_decide} or \code{axiom} declaration (lexical search of the code, comments excluded). The certificates use \code{decide +kernel}, which is evaluated by the kernel. The comments in the bundle are in Japanese and use a numbering of their own, not that of this paper. The bundle also contains developments not used here.\par}
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Declarations of the bundle \code{principia-ym-three-volumes-2026-11-13} used in this paper.}\label{tab:lean}
+\begin{tabular}{p{0.43\textwidth}p{0.5\textwidth}}\toprule
+declaration & statement in this paper \\\midrule
+\code{TwistedWilson.twisted\_vortex\_bound\_abs}, \code{thin\_vortex\_floor} & Proposition~\ref{prop:trivial}, the two bounds on $|\theta|$ (all $N,M\ge1$, real $\beta$; the latter for $\beta\ne0$) \\
+\code{TwistBlocks.thick\_vortex\_floor} & Theorem~\ref{thm:D}, bound on $|\theta|$ \\
+\code{TwistBlocks.block\_bound\_abs} & step (1) of the proof of Theorem~\ref{thm:D} \\
+\code{TwistBlocks.rigidT\_all}, \code{stab\_vacT} & flat twisted configurations on $T^2_N$; stabiliser $\pm1$ (Lemma~\ref{lem:flat}, Theorem~\ref{thm:D}) \\
+\code{VortexPos.Svortex\_ge\_unif}, \code{SN\_pos} & $S_*(N,\ell)\ge\delta_N>0$ for all $\ell$; $S_N>0$ \\
+\code{VortexCert.Svortex\_two\_eight\_le}, \code{Svortex\_three\_eight\_le}, \code{Svortex\_four\_four\_le}; \code{SN\_two\_lt}, \code{SN\_three\_lt}, \code{SN\_four\_lt} & certificates $S_*(2,8)\le6.67401$, $S_*(3,8)\le9.09321$, $S_*(4,4)\le12.02057$; $S_N<2N^2$ for $N=2,3,4$ \\
+\code{TwistBlocks.thick\_vortex\_floor\_two}, \code{\_three}, \code{\_four} & Theorem~\ref{thm:D} with rates $6.675$, $9.094$, $12.021$ \\
+\code{ThetaLimit.tendsto\_logratio\_div}, \code{TwistFlat.minDefect11\_pos}, \code{ThetaLimit.tendsto\_theta\_one} & $\Delta F/\beta\to S_{\min}(N,M)>0$, $\theta\to1$ (Corollary~\ref{cor:C}) \\
+\code{TwistFlat.no\_flat\_twist11} & sector $(1,1)$ has no configuration of action $0$ \\
+\code{TwistBlocks.theta\_nonneg}, \code{HalfSplit.Z1\_le\_Z0} & Proposition~\ref{prop:sign} \\
+\code{HalfSplit.half\_pairing\_nonneg}, \code{half\_split}, \code{FoldChess.chess\_one} & reflection positivity for $x_4\mapsto-x_4$ and splitting of the weight; abstract chessboard estimate (remark after Proposition~\ref{prop:rp}; not used for $\tilde\mu$) \\
+\code{PolyakovT.polyakov\_pair\_all} & Proposition~\ref{prop:poly} \\
+\code{TwistFloor.defect11\_ge\_two}, \code{defect11\_sym\_half} & $S_{\min}(N,M)\ge2N^2M^2/(N^2+M^2)^2$; $S_{\min}(N,N)\ge\frac12$ \\\bottomrule
+\end{tabular}
+\end{table}
+
+The identification of the Lean objects with the quantities of this paper is made in \S\ref{sec:dict}; it is on paper.
+Outside Lean are: the proof of Theorem~\ref{thm:A} except its three finite algebraic steps and the slice classification in Lemma~\ref{lem:flat} (\code{rigidT\_all}, \code{stab\_vacT}) (the measures, the quoted chessboard estimate for $\tilde\mu$, the Haar-ball volumes, the cohomology computation and the Morse--Bott argument), Theorem~\ref{thm:B}, the last step of Corollary~\ref{cor:C}, the elementary properties of $S_*$ (including $S_{\min}(N,k\ell)\le S_*(N,\ell)$ and $S_{\min}\le2N^2$), the rest of Lemma~\ref{lem:flat} (mixed plaquettes, the two orbits and their invariant), the inequality $\sigma_0\ge2e^{-2\beta N^2}$, the numbers after Proposition~\ref{prop:poly}, and the cooled and 40-digit values.
+
+{\sloppy The three finite algebraic steps of Theorem~\ref{thm:A} (factorisation, Proposition~\ref{prop:column}: \code{signed\_sum}, \code{unsigned\_sum}; subset expansion and binomial bound, Lemma~\ref{lem:goodbad}: \code{prod\_expand}, \code{binomial\_bound} for $0\le\eta\le1$; $(1-y)^n\le e^{-ny}$ for $y\le1$: \code{exp\_bound}) are in the module \code{ColumnChessboard} of version~1, which is not part of the bundle above; it is in the Lake project in the directory \code{lean/\allowbreak{}ym-fractional-instanton-rate} of the repository (file \code{FractionalInstanton/\allowbreak{}ColumnChessboard.lean}), and the file \code{axioms.txt} there is its complete \code{\#print axioms} output (each of the five: \code{[propext, Classical.choice, Quot.sound]}). To check it: in that directory run \code{lake exe cache get}, then \code{LEAN\_NUM\_THREADS=1 lake build}; the module can also be checked on its own with \code{lake env lean}.\par}
+Checksums of all Lean files are listed in \code{lean/SHA256SUMS}.
+To verify the bundle: unpack it, run \code{lake exe cache get}, build the modules containing the declarations of Table~\ref{tab:lean} and their imports (listed in \code{MODULES.tsv}; some modules of the bundle cannot be imported together, see its README), and run \code{lake env lean} on the files \code{checks/AxAll\_*.lean} and \code{checks/AxNew\_*.lean}, whose \code{\#print axioms} lines should agree with the axiom log.
+
+\section{Use of AI}\label{sec:ai}
+
+This research was carried out with the assistance of Claude Code (Anthropic). The constructions, the informal proofs, the computations, the Lean~4 development including the formalised statements, the literature search and this text were developed with the AI system under the author's direction. Separate sessions of the system then re-checked the Lean development and compared the text with it. The author reviewed the arguments, checked the Lean development and its axiom logs, and takes full responsibility for the content.
+
+This paper has not been refereed. The separate sessions mentioned in this section belong to the same AI system and share its blind spots. What the Lean kernel checks is checked; everything else rests on the author's word. In particular, the analytic steps of Theorems~\ref{thm:A} and~\ref{thm:B}, the identification of \S\ref{sec:dict}, the quoted chessboard estimate and all numerical values other than the three certificates of Theorem~\ref{thm:D} are not machine-checked. The proofs of Sections~\ref{sec:A}--\ref{sec:B} were re-derived line by line from an earlier written record before the text of version~1 was written. The version-1 module was rebuilt independently in a separate session on 2026-10-15 (every file checked with \code{lake env lean} in the same environment, rc=0, standard axioms only); that rebuild concerns the version-1 module only. For the bundle used in version~2, the axiom log of the whole bundle was taken again separately and agrees with the one in the repository.
+
+\paragraph{Version history.}
+Version 1, 2026-10-15. Version 2, 2026-11-14: added the machine-checked area law with rate $S_N$ (Theorem~\ref{thm:D}), the dictionary between the Lean objects and the quantities of the paper (\S\ref{sec:dict}), the sign of $\theta$ for even $M$ and the Polyakov loop pairs (\S\ref{sec:sign}), and the lower bound on $S_{\min}$; Corollary~\ref{cor:C} now gives the fixed-$M$ rate as the equality ``rate $=S_{\min}(N,M)$'' instead of an interval; the thin-vortex bound now has exponent $M^2$ for all $M$ (was $M^2/4$ for even $M$); the classification of flat twisted configurations on each slice and their stabiliser (Lemma~\ref{lem:flat}) are machine-checked; corrected the count of machine-checked algebraic steps, added the reference for the Tomboulis--Yaffe inequality, wrote the cooled value $S_{\min}(3,16)$ as an upper bound, and removed the citation of an online exposition, so that the paper is self-contained. The text was rewritten for readability on 2026-11-15. In addition, the first row of Table~\ref{tab:lean} now says that the second of the two bounds is for $\beta\ne0$, and the remark on the weaker exponent $M^2/4$ says how version~1 stated it; the statements, proofs, numbers and the rest of the tables are unchanged.
+
+\begin{thebibliography}{FILS}
+\bibitem[Bi]{Bi} M.~Biskup, Reflection positivity and phase transitions in lattice spin models, Lecture Notes in Math.\ 1970 (2009) 1 (not consulted directly).
+\bibitem[Bott]{Bott} R.~Bott, Ann.\ of Math.\ 60 (1954) 248 (not consulted directly).
+\bibitem[FILS]{FILS} J.~Fr\"ohlich, R.~Israel, E.~H.~Lieb, B.~Simon, Commun.\ Math.\ Phys.\ 62 (1978) 1 (not consulted directly).
+\bibitem[GAM]{GAM} A.~Gonz\'alez-Arroyo, A.~Montero, Phys.\ Lett.\ B 442 (1998) 273, arXiv:hep-th/9809037 (not consulted directly).
+\bibitem[Sh]{Sh} S.~B.~Shlosman, Russian Math.\ Surveys 41 (1986) 83 (not consulted directly).
+\bibitem[tH81]{tH81} G.~'t~Hooft, Commun.\ Math.\ Phys.\ 81 (1981) 267 (not consulted directly).
+\bibitem[TU]{TU} Y.~Tanizaki, M.~\"Unsal, Prog.\ Theor.\ Exp.\ Phys.\ (2022), arXiv:2201.06166 (not consulted directly).
+\bibitem[TY]{TY} E.~T.~Tomboulis, L.~G.~Yaffe, Finite temperature SU(2) lattice gauge theory, Commun.\ Math.\ Phys.\ 100 (1985) 313 (not consulted directly).
+\end{thebibliography}
+\end{document}
